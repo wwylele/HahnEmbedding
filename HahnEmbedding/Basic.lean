@@ -1,5 +1,8 @@
 import Mathlib.Algebra.Order.Archimedean.Basic
 import Mathlib.Algebra.Group.Subgroup.Defs
+import Mathlib.GroupTheory.QuotientGroup.Defs
+import Mathlib.Algebra.Order.Hom.Monoid
+import Mathlib.Algebra.Order.Monoid.Submonoid
 
 section Patch
 theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
@@ -473,10 +476,10 @@ instance AbsArchimedeanClass.instLinearOrder : LinearOrder (AbsArchimedeanClass 
   unfold AbsArchimedeanClass
   infer_instance
 
-theorem AbsArchimedeanClass.le_one (a : AbsArchimedeanClass M) : a ≤ 1 := by
+theorem AbsArchimedeanClass.le_one (u : AbsArchimedeanClass M) : u ≤ 1 := by
   apply Subtype.coe_le_coe.mp
   rw [AbsArchimedeanClass.one_eq]
-  exact a.prop
+  exact u.prop
 
 theorem AbsArchimedeanClass.eq_iff (a b : M) :
     AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk b ↔
@@ -623,20 +626,181 @@ theorem AbsArchimedeanClass.mk_mul (a b : M) : min (mk a) (mk b) ≤ mk (a * b) 
     rw [mul_comm]
     exact (AbsArchimedeanClass.mk_mul_of_lt hab).le
 
+theorem AbsArchimedeanClass.lt_of_mk_lt_mk {a b : M} (h : mk a < mk b) (hpos : 1 ≤ a) : b < a := by
+  obtain h := (AbsArchimedeanClass.lt_iff _ _).mp h 1
+  rw [pow_one, mabs_lt, mabs_eq_self.mpr hpos] at h
+  exact h.2
+
 instance AbsArchimedeanClass.instOrderTop : OrderTop (AbsArchimedeanClass M) where
   top := 1
   le_top := AbsArchimedeanClass.le_one
 
-def AbsArchimedeanClass.subgroup (minClass : AbsArchimedeanClass M) : Subgroup M where
-  carrier := AbsArchimedeanClass.mk ⁻¹' (Set.Ici minClass)
+def ArchimedeanSubgroup (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] : Subgroup M where
+  carrier := AbsArchimedeanClass.mk ⁻¹' s.carrier
   mul_mem' := by
     intro a b ha hb
-    simp only [Set.mem_preimage, Set.mem_Ici] at ha hb ⊢
-    exact (le_min ha hb).trans (AbsArchimedeanClass.mk_mul _ _)
-  one_mem' := by simpa using AbsArchimedeanClass.le_one minClass
+    simp only [Set.mem_preimage] at ha hb ⊢
+    obtain h|h := min_le_iff.mp (AbsArchimedeanClass.mk_mul a b)
+    · apply s.upper' h ha
+    · apply s.upper' h hb
+  one_mem' := by
+    simp only [Set.mem_preimage]
+    obtain ⟨u, hu⟩ := hempty
+    simpa using s.upper' (AbsArchimedeanClass.le_one u) hu
   inv_mem' := by
     intro a h
-    simp [Set.mem_preimage,
-      Set.mem_Ici] at h ⊢
+    simp [Set.mem_preimage] at h ⊢
     rw [AbsArchimedeanClass.mk_inv]
     exact h
+
+
+instance ArchimedeanSubgroup.instLinearOrder
+    (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+  LinearOrder (ArchimedeanSubgroup s) := by infer_instance
+
+instance ArchimedeanSubgroup.instIsOrderedMonoid
+    (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+  IsOrderedMonoid (ArchimedeanSubgroup s) := by infer_instance
+
+theorem ArchimedeanSubgroup.le (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (hst : s.carrier ⊆ t.carrier) :
+    ArchimedeanSubgroup s ≤ ArchimedeanSubgroup t := by
+  unfold ArchimedeanSubgroup
+  simp only [Subgroup.mk_le_mk]
+  refine (Set.preimage_subset_preimage_iff ?_).mpr ?_
+  · intro a h
+    use a.val.out
+    unfold AbsArchimedeanClass.mk ArchimedeanClass.mk
+    apply Subtype.eq_iff.mpr
+    simp only
+    rw [mabs_eq_inv_self.mpr (by
+      rw [← ArchimedeanClass.one_mk_out]
+      exact (ArchimedeanClass.le_def a.val 1).mp a.prop
+    )]
+    simp only [inv_inv, Quotient.out_eq]
+  · exact hst
+
+abbrev ArchimedeanQuotient (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :=
+  M ⧸ ArchimedeanSubgroup s
+
+abbrev ArchimedeanQuotient.mk (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+    ArchimedeanQuotient s :=
+  a
+
+theorem ArchimedeanQuotient.eq_iff (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a b : M) :
+    ArchimedeanQuotient.mk s a = ArchimedeanQuotient.mk s b ↔ (AbsArchimedeanClass.mk (a⁻¹ * b)) ∈ s.carrier := by
+  rw [QuotientGroup.eq]
+  unfold ArchimedeanSubgroup
+  simp
+
+theorem ArchimedeanQuotient.mk_out (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+    (AbsArchimedeanClass.mk (a⁻¹ * (ArchimedeanQuotient.mk s a).out)) ∈ s.carrier := by
+  rw [← ArchimedeanQuotient.eq_iff]
+  simp
+
+theorem ArchimedeanQuotient.mk_out' (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+    (AbsArchimedeanClass.mk ((ArchimedeanQuotient.mk s a).out⁻¹ * a)) ∈ s.carrier := by
+  rw [← ArchimedeanQuotient.eq_iff]
+  simp
+
+noncomputable
+instance ArchimedeanQuotient.instLinearOrder (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    LinearOrder (ArchimedeanQuotient s) :=
+  LinearOrder.lift' (·.out) Quotient.out_injective
+
+theorem ArchimedeanQuotient.le_def (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    ∀ (x y : ArchimedeanQuotient s), x ≤ y ↔ x.out ≤ y.out := by
+  intro x y
+  rfl
+
+theorem ArchimedeanQuotient.lt_def (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    ∀ (x y : ArchimedeanQuotient s), x < y ↔ x.out < y.out := by
+  intro x y
+  rfl
+
+def ArchimedeanQuotient.instOrderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    (M →*o ArchimedeanQuotient s) := {
+  (QuotientGroup.mk' (ArchimedeanSubgroup s) : M →* ArchimedeanQuotient s) with
+  monotone' := by
+    intro a b hab
+    simp only [OneHom.toFun_eq_coe, MonoidHom.toOneHom_coe, QuotientGroup.mk'_apply]
+    rw [ArchimedeanQuotient.le_def]
+    by_cases heq : ArchimedeanQuotient.mk s a = ArchimedeanQuotient.mk s b
+    · apply le_of_eq
+      congr
+    · have hne : a ≠ b := by aesop
+      have hpos : 1 ≤ a⁻¹ * b := by aesop
+      have hnotmem : AbsArchimedeanClass.mk (a⁻¹ * b) ∉ s.carrier :=
+        (not_iff_not.mpr (ArchimedeanQuotient.eq_iff _ _ _)).mp heq
+      apply le_of_lt
+      suffices 1 < (ArchimedeanQuotient.mk s a).out⁻¹ * (ArchimedeanQuotient.mk s b).out by
+        aesop
+      suffices 1 < a⁻¹ * b * ((a * ((ArchimedeanQuotient.mk s a).out⁻¹)) * (((ArchimedeanQuotient.mk s b).out) * b⁻¹)) by
+        convert this using 1
+        -- I'd like to have a (m)abel tactic here
+        rw [← mul_assoc, ← mul_assoc, ← mul_assoc, mul_right_comm _ _ a,
+          mul_right_comm _ _ b⁻¹, mul_right_comm _ _ b⁻¹]
+        simp
+      suffices ((a⁻¹ * (ArchimedeanQuotient.mk s a).out) * ((ArchimedeanQuotient.mk s b).out⁻¹ * b)) < a⁻¹ * b by
+        apply inv_lt_iff_one_lt_mul.mp
+        rw [mul_inv, mul_inv, mul_inv]
+        simpa using this
+      refine AbsArchimedeanClass.lt_of_mk_lt_mk ?_ hpos
+      refine lt_of_lt_of_le ?_ (AbsArchimedeanClass.mk_mul _ _)
+      apply lt_min
+      · contrapose! hnotmem with hclassle
+        apply s.upper' hclassle
+        apply ArchimedeanQuotient.mk_out
+      · contrapose! hnotmem with hclassle
+        apply s.upper' hclassle
+        apply ArchimedeanQuotient.mk_out'
+}
+
+theorem ArchimedeanQuotient.surjective_OrderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    Function.Surjective (ArchimedeanQuotient.instOrderMonoidHom s) := by
+  apply Quotient.mk_surjective
+
+-- TODO: extract a theorem: a surjective OrderMonidHom implies IsOrderedMonoid domain
+instance ArchimedeanQuotient.instIsOrderedMonoid (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    IsOrderedMonoid (ArchimedeanQuotient s) where
+  mul_le_mul_left (a b) := by
+    intro h c
+    by_cases heq : a = b
+    · rw [heq]
+    · have hlt : a < b := by exact lt_of_le_of_ne h heq
+      obtain ⟨a', ha⟩ := ArchimedeanQuotient.surjective_OrderMonoidHom s a
+      obtain ⟨b', hb⟩ := ArchimedeanQuotient.surjective_OrderMonoidHom s b
+      obtain ⟨c', hc⟩ := ArchimedeanQuotient.surjective_OrderMonoidHom s c
+      have : a' < b' := by
+        contrapose! hlt
+        rw [← ha, ← hb]
+        exact (ArchimedeanQuotient.instOrderMonoidHom s).toOrderHom.monotone hlt
+      rw [← ha, ← hb, ← hc, ← map_mul, ← map_mul]
+      apply (ArchimedeanQuotient.instOrderMonoidHom s).toOrderHom.monotone
+      exact le_of_lt <| mul_lt_mul_left' this c'
+
+abbrev ArchimedeanLayer (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] :=
+  Subgroup.map (ArchimedeanQuotient.instOrderMonoidHom s).toMonoidHom (ArchimedeanSubgroup t)
+
+noncomputable
+instance ArchimedeanLayer.instLinearOrder (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] : LinearOrder (ArchimedeanLayer s t) := by infer_instance
+
+theorem ArchimedeanLayer.le_def (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] : ∀ (x y : ArchimedeanLayer s t), x ≤ y ↔ x.val.out ≤ y.val.out := by
+  intro x y
+  rfl
+
+instance ArchimedeanLayer.instIsOrderedMonoid (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] : IsOrderedMonoid (ArchimedeanLayer s t) := by infer_instance
+
+noncomputable
+def ArchimedeanLayer.class_map (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (a : AbsArchimedeanClass (ArchimedeanLayer s t)):
+    (s.carrier \ t.carrier ∪ {1} : Set (AbsArchimedeanClass M)) :=
+  ⟨AbsArchimedeanClass.mk a.val.out.val.out, sorry⟩
+
+def ArchimedeanLayer.class_orderIso (s t : UpperSet (AbsArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] :
+    AbsArchimedeanClass (ArchimedeanLayer s t) ≃o (s.carrier \ t.carrier ∪ {1} : Set (AbsArchimedeanClass M)) := by sorry
