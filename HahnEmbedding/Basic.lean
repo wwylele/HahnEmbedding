@@ -14,31 +14,31 @@ end Patch
 variable {M : Type*}
 variable [CommMonoid M] [LinearOrder M]
 
-def ArchimedeanEquiv (x y : M) :=
+def PseudoArchimedeanEquiv (x y : M) :=
   ∃ (n : ℕ), (n ≠ 0) ∧ ((x ≤ y ∧ (y ≤ x ^ n ∨ y ^ n ≤ x)) ∨
   (y ≤ x ∧ (x ≤ y ^ n ∨ x ^ n ≤ y)))
 
 
-theorem ArchimedeanEquiv.refl (x : M) : ArchimedeanEquiv x x := by
-  unfold ArchimedeanEquiv
+theorem PseudoArchimedeanEquiv.refl (x : M) : PseudoArchimedeanEquiv x x := by
+  unfold PseudoArchimedeanEquiv
   use 1
   simp
 
-theorem ArchimedeanEquiv.symm {x y : M} (h : ArchimedeanEquiv x y) :
-    ArchimedeanEquiv y x := by
-  unfold ArchimedeanEquiv at h ⊢
+theorem PseudoArchimedeanEquiv.symm {x y : M} (h : PseudoArchimedeanEquiv x y) :
+    PseudoArchimedeanEquiv y x := by
+  unfold PseudoArchimedeanEquiv at h ⊢
   aesop
 
-theorem ArchimedeanEquiv.dual {x y : M} (h : ArchimedeanEquiv x y) : ArchimedeanEquiv (M := Mᵒᵈ) x y := by
-  unfold ArchimedeanEquiv at h ⊢
+theorem PseudoArchimedeanEquiv.dual {x y : M} (h : PseudoArchimedeanEquiv x y) : PseudoArchimedeanEquiv (M := Mᵒᵈ) x y := by
+  unfold PseudoArchimedeanEquiv at h ⊢
   aesop
 
 variable [IsOrderedMonoid M]
 
-theorem archimedeanEquiv_iff_of_one_lt_right (x y : M) (hlt : 1 < y) :
-    ArchimedeanEquiv x y ↔
+theorem PseudoArchimedeanEquiv.iff_of_one_lt_right (x y : M) (hlt : 1 < y) :
+    PseudoArchimedeanEquiv x y ↔
     ∃ (n : ℕ), (n ≠ 0) ∧ ((x ≤ y ∧ y ≤ x ^ n) ∨ (y ≤ x ∧ x ≤ y ^ n)) := by
-  unfold ArchimedeanEquiv
+  unfold PseudoArchimedeanEquiv
   constructor
   · intro ⟨n, ⟨hn0, h⟩⟩
     use n
@@ -83,13 +83,13 @@ theorem archimedeanEquiv_iff_of_one_lt_right (x y : M) (hlt : 1 < y) :
             exact lt_of_le_of_ne h hxm
   · aesop
 
-theorem archimedeanEquiv_iff_of_right_lt_one (x y : M) (hlt : y < 1) :
-    ArchimedeanEquiv x y ↔
+theorem PseudoArchimedeanEquiv.iff_of_right_lt_one (x y : M) (hlt : y < 1) :
+    PseudoArchimedeanEquiv x y ↔
     ∃ (n : ℕ), (n ≠ 0) ∧ ((x ≤ y ∧ y ^ n ≤ x) ∨ (y ≤ x ∧ (x ^ n ≤ y))) := by
-  unfold ArchimedeanEquiv
+  unfold PseudoArchimedeanEquiv
   constructor
-  · obtain h := (archimedeanEquiv_iff_of_one_lt_right (M := Mᵒᵈ) x y hlt).mp
-    unfold ArchimedeanEquiv at h
+  · obtain h := (PseudoArchimedeanEquiv.iff_of_one_lt_right (M := Mᵒᵈ) x y hlt).mp
+    unfold PseudoArchimedeanEquiv at h
     intro ⟨n, ⟨hn0, hn⟩⟩
     obtain ⟨n, ⟨hn0', hn'⟩⟩ := h (by
       use n
@@ -108,8 +108,8 @@ theorem archimedeanEquiv_iff_of_right_lt_one (x y : M) (hlt : y < 1) :
     · exact hn'.symm
   · aesop
 
-theorem archimedeanEquiv_one_iff (x : M) : ArchimedeanEquiv x 1 ↔ x = 1 := by
-  unfold ArchimedeanEquiv
+theorem PseudoArchimedeanEquiv.one_iff (x : M) : PseudoArchimedeanEquiv x 1 ↔ x = 1 := by
+  unfold PseudoArchimedeanEquiv
   constructor
   · intro ⟨n, ⟨h0, h⟩⟩
     rw [one_le_pow_iff h0, pow_le_one_iff h0] at h
@@ -122,10 +122,10 @@ theorem archimedeanEquiv_one_iff (x : M) : ArchimedeanEquiv x 1 ↔ x = 1 := by
     rw [hx]
     simp
 
-theorem ArchimedeanEquiv.le_one {x y : M} (h : ArchimedeanEquiv x y) (hle : y ≤ 1) :
+theorem PseudoArchimedeanEquiv.le_one {x y : M} (h : PseudoArchimedeanEquiv x y) (hle : y ≤ 1) :
     x ≤ 1 := by
   by_contra! hlt
-  unfold ArchimedeanEquiv at h
+  unfold PseudoArchimedeanEquiv at h
   obtain ⟨n, ⟨hn0, hn⟩⟩ := h
   have hyx : y < x := lt_of_le_of_lt hle hlt
   have hxy : ¬ x ≤ y := not_le_of_lt hyx
@@ -140,32 +140,32 @@ theorem ArchimedeanEquiv.le_one {x y : M} (h : ArchimedeanEquiv x y) (hle : y �
     obtain h := lt_of_le_of_lt hx hxx
     simp at h
 
-theorem ArchimedeanEquiv.lt_one {x y : M} (h : ArchimedeanEquiv x y) (hlt : y < 1) :
+theorem PseudoArchimedeanEquiv.lt_one {x y : M} (h : PseudoArchimedeanEquiv x y) (hlt : y < 1) :
     x < 1 := by
-  obtain hle := ArchimedeanEquiv.le_one h hlt.le
+  obtain hle := PseudoArchimedeanEquiv.le_one h hlt.le
   apply lt_of_le_of_ne hle
   contrapose! h
   rw [h]
-  obtain hy1 := (not_iff_not.mpr (archimedeanEquiv_one_iff y)).mpr (ne_of_lt hlt)
+  obtain hy1 := (not_iff_not.mpr (PseudoArchimedeanEquiv.one_iff y)).mpr (ne_of_lt hlt)
   contrapose! hy1
-  exact ArchimedeanEquiv.symm hy1
+  exact PseudoArchimedeanEquiv.symm hy1
 
-theorem ArchimedeanEquiv.one_le {x y : M} (h : ArchimedeanEquiv x y) (hle : 1 ≤ y) :
+theorem PseudoArchimedeanEquiv.one_le {x y : M} (h : PseudoArchimedeanEquiv x y) (hle : 1 ≤ y) :
     1 ≤ x :=
-  ArchimedeanEquiv.le_one (M := Mᵒᵈ) ((ArchimedeanEquiv.dual) h) hle
+  PseudoArchimedeanEquiv.le_one (M := Mᵒᵈ) ((PseudoArchimedeanEquiv.dual) h) hle
 
-theorem ArchimedeanEquiv.one_lt {x y : M} (h : ArchimedeanEquiv x y) (hle : 1 < y) :
+theorem PseudoArchimedeanEquiv.one_lt {x y : M} (h : PseudoArchimedeanEquiv x y) (hle : 1 < y) :
     1 < x :=
-  ArchimedeanEquiv.lt_one (M := Mᵒᵈ) ((ArchimedeanEquiv.dual) h) hle
+  PseudoArchimedeanEquiv.lt_one (M := Mᵒᵈ) ((PseudoArchimedeanEquiv.dual) h) hle
 
-theorem ArchimedeanEquiv.trans_of_lt_one {x y z : M} (hy1 : y < 1)
-    (hxy : ArchimedeanEquiv x y) (hyz : ArchimedeanEquiv y z) :
-    ArchimedeanEquiv x z := by
-  obtain hzy := ArchimedeanEquiv.symm hyz
-  obtain ⟨m, ⟨hm0, hm⟩⟩ := (archimedeanEquiv_iff_of_right_lt_one x y hy1).mp hxy
-  obtain ⟨n, ⟨hn0, hn⟩⟩ := (archimedeanEquiv_iff_of_right_lt_one z y hy1).mp hzy
-  obtain hz1 : z < 1 := ArchimedeanEquiv.lt_one hzy hy1
-  apply (archimedeanEquiv_iff_of_right_lt_one x z hz1).mpr
+theorem PseudoArchimedeanEquiv.trans_of_lt_one {x y z : M} (hy1 : y < 1)
+    (hxy : PseudoArchimedeanEquiv x y) (hyz : PseudoArchimedeanEquiv y z) :
+    PseudoArchimedeanEquiv x z := by
+  obtain hzy := PseudoArchimedeanEquiv.symm hyz
+  obtain ⟨m, ⟨hm0, hm⟩⟩ := (PseudoArchimedeanEquiv.iff_of_right_lt_one x y hy1).mp hxy
+  obtain ⟨n, ⟨hn0, hn⟩⟩ := (PseudoArchimedeanEquiv.iff_of_right_lt_one z y hy1).mp hzy
+  obtain hz1 : z < 1 := PseudoArchimedeanEquiv.lt_one hzy hy1
+  apply (PseudoArchimedeanEquiv.iff_of_right_lt_one x z hz1).mpr
   obtain ⟨hzy, hn⟩|⟨hyz, hn⟩ := hn
   · obtain ⟨hxy, hm⟩|⟨hyx, hm⟩ := hm
     · obtain hxz|hxz := le_total x z
@@ -216,59 +216,59 @@ theorem ArchimedeanEquiv.trans_of_lt_one {x y z : M} (hy1 : y < 1)
           · exact hxz
           · exact hm.trans hyz
 
-theorem ArchimedeanEquiv.trans {x y z : M}
-    (hxy : ArchimedeanEquiv x y) (hyz : ArchimedeanEquiv y z) :
-    ArchimedeanEquiv x z := by
-  obtain hzy := ArchimedeanEquiv.symm hyz
+theorem PseudoArchimedeanEquiv.trans {x y z : M}
+    (hxy : PseudoArchimedeanEquiv x y) (hyz : PseudoArchimedeanEquiv y z) :
+    PseudoArchimedeanEquiv x z := by
+  obtain hzy := PseudoArchimedeanEquiv.symm hyz
   obtain hy1|hy1|hy1 := lt_trichotomy y 1
-  · exact ArchimedeanEquiv.trans_of_lt_one hy1 hxy hyz
+  · exact PseudoArchimedeanEquiv.trans_of_lt_one hy1 hxy hyz
   · rw [hy1] at hxy hzy
-    obtain hx := (archimedeanEquiv_one_iff x).mp hxy
-    obtain hz := (archimedeanEquiv_one_iff z).mp hzy
+    obtain hx := (PseudoArchimedeanEquiv.one_iff x).mp hxy
+    obtain hz := (PseudoArchimedeanEquiv.one_iff z).mp hzy
     rw [hx, hz]
-    exact ArchimedeanEquiv.refl 1
-  · exact (ArchimedeanEquiv.dual (M := Mᵒᵈ)) <|
-      ArchimedeanEquiv.trans_of_lt_one (M := Mᵒᵈ) hy1
-      ((ArchimedeanEquiv.dual) hxy)
-      ((ArchimedeanEquiv.dual) hyz)
+    exact PseudoArchimedeanEquiv.refl 1
+  · exact (PseudoArchimedeanEquiv.dual (M := Mᵒᵈ)) <|
+      PseudoArchimedeanEquiv.trans_of_lt_one (M := Mᵒᵈ) hy1
+      ((PseudoArchimedeanEquiv.dual) hxy)
+      ((PseudoArchimedeanEquiv.dual) hyz)
 
-def ArchimedeanEquiv.equiv : Equivalence (ArchimedeanEquiv (M := M)) where
-  refl := ArchimedeanEquiv.refl
-  symm := ArchimedeanEquiv.symm
-  trans := ArchimedeanEquiv.trans
+def PseudoArchimedeanEquiv.equiv : Equivalence (PseudoArchimedeanEquiv (M := M)) where
+  refl := PseudoArchimedeanEquiv.refl
+  symm := PseudoArchimedeanEquiv.symm
+  trans := PseudoArchimedeanEquiv.trans
 
-def ArchimedeanEquiv.setoid : Setoid M where
-  r := ArchimedeanEquiv
-  iseqv := ArchimedeanEquiv.equiv
+def PseudoArchimedeanEquiv.setoid : Setoid M where
+  r := PseudoArchimedeanEquiv
+  iseqv := PseudoArchimedeanEquiv.equiv
 
-def ArchimedeanClass (M : Type*) [CommMonoid M] [LinearOrder M] [IsOrderedMonoid M] :=
-    Quotient (ArchimedeanEquiv.setoid (M := M))
+def PseudoArchimedeanClass (M : Type*) [CommMonoid M] [LinearOrder M] [IsOrderedMonoid M] :=
+    Quotient (PseudoArchimedeanEquiv.setoid (M := M))
 
-def ArchimedeanClass.mk (a : M) : ArchimedeanClass M := ⟦a⟧
+def PseudoArchimedeanClass.mk (a : M) : PseudoArchimedeanClass M := ⟦a⟧
 
 noncomputable
-instance ArchimedeanClass.instLinearOrder : LinearOrder (ArchimedeanClass M) :=
+instance PseudoArchimedeanClass.instLinearOrder : LinearOrder (PseudoArchimedeanClass M) :=
   LinearOrder.lift' Quotient.out (Quotient.out_injective)
 
-theorem ArchimedeanClass.le_def : ∀ (a b : ArchimedeanClass M), a ≤ b ↔ a.out ≤ b.out := by
+theorem PseudoArchimedeanClass.le_def : ∀ (a b : PseudoArchimedeanClass M), a ≤ b ↔ a.out ≤ b.out := by
   intro a b
   rfl
 
-theorem ArchimedeanClass.lt_def : ∀ (a b : ArchimedeanClass M), a < b ↔ a.out < b.out := by
+theorem PseudoArchimedeanClass.lt_def : ∀ (a b : PseudoArchimedeanClass M), a < b ↔ a.out < b.out := by
   intro a b
   rfl
 
-theorem ArchimedeanClass.lt_of_lt_of_one_lt_right {a b : M} (h : ArchimedeanClass.mk a < ArchimedeanClass.mk b)
+theorem PseudoArchimedeanClass.lt_of_lt_of_one_lt_right {a b : M} (h : PseudoArchimedeanClass.mk a < PseudoArchimedeanClass.mk b)
     (hb : 1 < b) : a < b := by
   rw [lt_def] at h
   set a' := Quotient.out (mk a)
   set b' := Quotient.out (mk b)
-  have haeq : ArchimedeanEquiv a' a := Quotient.mk_out (s := ArchimedeanEquiv.setoid) a
-  have hbeq : ArchimedeanEquiv b' b := Quotient.mk_out (s := ArchimedeanEquiv.setoid) b
-  obtain ⟨n, hn0, hn⟩ := (archimedeanEquiv_iff_of_one_lt_right b' b hb).mp hbeq
+  have haeq : PseudoArchimedeanEquiv a' a := Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) a
+  have hbeq : PseudoArchimedeanEquiv b' b := Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) b
+  obtain ⟨n, hn0, hn⟩ := (PseudoArchimedeanEquiv.iff_of_one_lt_right b' b hb).mp hbeq
   obtain ha|ha := le_or_gt a 1
   · exact lt_of_le_of_lt ha hb
-  · obtain ⟨m, hm0, hm⟩ := (archimedeanEquiv_iff_of_one_lt_right a' a ha).mp haeq
+  · obtain ⟨m, hm0, hm⟩ := (PseudoArchimedeanEquiv.iff_of_one_lt_right a' a ha).mp haeq
     obtain ⟨hn1, hn2⟩|⟨hn1, hn2⟩ := hn
     · obtain ⟨hm1, hm2⟩|⟨hm1, hm2⟩ := hm
       · contrapose! h
@@ -321,20 +321,20 @@ theorem ArchimedeanClass.lt_of_lt_of_one_lt_right {a b : M} (h : ArchimedeanClas
               exact hm1.trans ha'leb' |>.trans hn2
         · exact le_of_lt hb'lta'
 
-theorem ArchimedeanClass.lt_of_lt_of_right_lt_one {a b : M} (h : ArchimedeanClass.mk a < ArchimedeanClass.mk b)
+theorem PseudoArchimedeanClass.lt_of_lt_of_right_lt_one {a b : M} (h : PseudoArchimedeanClass.mk a < PseudoArchimedeanClass.mk b)
     (hb : b < 1) : a < b := by
   rw [lt_def] at h
   set a' := Quotient.out (mk a)
   set b' := Quotient.out (mk b)
-  have haeq : ArchimedeanEquiv a' a := Quotient.mk_out (s := ArchimedeanEquiv.setoid) a
-  have hbeq : ArchimedeanEquiv b' b := Quotient.mk_out (s := ArchimedeanEquiv.setoid) b
-  obtain ⟨n, hn0, hn⟩ := (archimedeanEquiv_iff_of_right_lt_one b' b hb).mp hbeq
+  have haeq : PseudoArchimedeanEquiv a' a := Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) a
+  have hbeq : PseudoArchimedeanEquiv b' b := Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) b
+  obtain ⟨n, hn0, hn⟩ := (PseudoArchimedeanEquiv.iff_of_right_lt_one b' b hb).mp hbeq
   obtain ha|ha := le_or_gt 1 a
-  · obtain hb' := ArchimedeanEquiv.lt_one hbeq hb
-    obtain ha' := ArchimedeanEquiv.one_le haeq ha
+  · obtain hb' := PseudoArchimedeanEquiv.lt_one hbeq hb
+    obtain ha' := PseudoArchimedeanEquiv.one_le haeq ha
     obtain h' := (lt_of_lt_of_le hb' ha').trans h
     simp at h'
-  · obtain ⟨m, hm0, hm⟩ := (archimedeanEquiv_iff_of_right_lt_one a' a ha).mp haeq
+  · obtain ⟨m, hm0, hm⟩ := (PseudoArchimedeanEquiv.iff_of_right_lt_one a' a ha).mp haeq
     obtain ⟨hn1, hn2⟩|⟨hn1, hn2⟩ := hn
     · obtain ⟨hm1, hm2⟩|⟨hm1, hm2⟩ := hm
       · contrapose! h
@@ -387,73 +387,73 @@ theorem ArchimedeanClass.lt_of_lt_of_right_lt_one {a b : M} (h : ArchimedeanClas
               exact haa.trans habpow |>.trans hn2
         · exact le_of_lt hb'lta'
 
-theorem ArchimedeanClass.one_mk_out : (ArchimedeanClass.mk (M := M) 1).out = 1 :=
-  (archimedeanEquiv_one_iff _).mp <| Quotient.mk_out (s := ArchimedeanEquiv.setoid) 1
+theorem PseudoArchimedeanClass.one_mk_out : (PseudoArchimedeanClass.mk (M := M) 1).out = 1 :=
+  (PseudoArchimedeanEquiv.one_iff _).mp <| Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) 1
 
 
-theorem ArchimedeanClass.lt_of_lt {a b : M} (h : ArchimedeanClass.mk a < ArchimedeanClass.mk b) :
+theorem PseudoArchimedeanClass.lt_of_lt {a b : M} (h : PseudoArchimedeanClass.mk a < PseudoArchimedeanClass.mk b) :
     a < b := by
   obtain hb|hb|hb := lt_trichotomy b 1
-  · exact ArchimedeanClass.lt_of_lt_of_right_lt_one h hb
+  · exact PseudoArchimedeanClass.lt_of_lt_of_right_lt_one h hb
   · rw [hb] at h ⊢
     have h : (mk a).out < (mk 1).out := h
-    rw [ArchimedeanClass.one_mk_out] at h
+    rw [PseudoArchimedeanClass.one_mk_out] at h
     set a' := Quotient.out (mk a)
-    have haeq : ArchimedeanEquiv a' a := Quotient.mk_out (s := ArchimedeanEquiv.setoid) a
-    exact ArchimedeanEquiv.lt_one haeq.symm h
-  · exact ArchimedeanClass.lt_of_lt_of_one_lt_right h hb
+    have haeq : PseudoArchimedeanEquiv a' a := Quotient.mk_out (s := PseudoArchimedeanEquiv.setoid) a
+    exact PseudoArchimedeanEquiv.lt_one haeq.symm h
+  · exact PseudoArchimedeanClass.lt_of_lt_of_one_lt_right h hb
 
-theorem ArchimedeanClass.mk_monotone : Monotone (ArchimedeanClass.mk (M := M)) := by
+theorem PseudoArchimedeanClass.mk_monotone : Monotone (PseudoArchimedeanClass.mk (M := M)) := by
   intro a b h
   contrapose! h
-  exact ArchimedeanClass.lt_of_lt h
+  exact PseudoArchimedeanClass.lt_of_lt h
 
-instance ArchimedeanClass.instOne : One (ArchimedeanClass M) where
-  one := ArchimedeanClass.mk 1
+instance PseudoArchimedeanClass.instOne : One (PseudoArchimedeanClass M) where
+  one := PseudoArchimedeanClass.mk 1
 
-theorem ArchimedeanClass.mk_one : ArchimedeanClass.mk (M := M) 1 = 1 := by
+theorem PseudoArchimedeanClass.mk_one : PseudoArchimedeanClass.mk (M := M) 1 = 1 := by
   rfl
 
-theorem ArchimedeanClass.one_out : (1 : ArchimedeanClass (M := M)).out = 1 := by
-  apply ArchimedeanClass.one_mk_out
+theorem PseudoArchimedeanClass.one_out : (1 : PseudoArchimedeanClass (M := M)).out = 1 := by
+  apply PseudoArchimedeanClass.one_mk_out
 
-theorem ArchimedeanClass.mk_eq_one (a : M) : a = 1 ↔ mk a = 1 := by
+theorem PseudoArchimedeanClass.mk_eq_one (a : M) : a = 1 ↔ mk a = 1 := by
   constructor
   · intro h
     rw [h]
     rfl
   · intro h
-    rw [← ArchimedeanClass.mk_one] at h
+    rw [← PseudoArchimedeanClass.mk_one] at h
     unfold mk at h
     rw [Quotient.eq] at h
-    apply (archimedeanEquiv_one_iff _).mp h
+    apply (PseudoArchimedeanEquiv.one_iff _).mp h
 
-theorem ArchimedeanClass.mk_lt_one (a : M) : a < 1 ↔ mk a < 1 := by
-  rw [← ArchimedeanClass.mk_one]
+theorem PseudoArchimedeanClass.mk_lt_one (a : M) : a < 1 ↔ mk a < 1 := by
+  rw [← PseudoArchimedeanClass.mk_one]
   constructor
   · intro h
     apply lt_of_le_of_ne
-    · exact ArchimedeanClass.mk_monotone h.le
+    · exact PseudoArchimedeanClass.mk_monotone h.le
     · contrapose! h
       apply le_of_eq
-      exact ((ArchimedeanClass.mk_eq_one _).mpr h).symm
-  · exact ArchimedeanClass.mk_monotone.reflect_lt
+      exact ((PseudoArchimedeanClass.mk_eq_one _).mpr h).symm
+  · exact PseudoArchimedeanClass.mk_monotone.reflect_lt
 
-theorem ArchimedeanClass.mk_one_le (a : M) : 1 ≤ a ↔ 1 ≤ mk a := by
-  simpa using (ArchimedeanClass.mk_lt_one a).not
+theorem PseudoArchimedeanClass.mk_one_le (a : M) : 1 ≤ a ↔ 1 ≤ mk a := by
+  simpa using (PseudoArchimedeanClass.mk_lt_one a).not
 
-theorem ArchimedeanClass.mk_one_lt (a : M) : 1 < a ↔ 1 < mk a := by
-  have eq := ArchimedeanClass.mk_eq_one a
-  have le := ArchimedeanClass.mk_one_le a
+theorem PseudoArchimedeanClass.mk_one_lt (a : M) : 1 < a ↔ 1 < mk a := by
+  have eq := PseudoArchimedeanClass.mk_eq_one a
+  have le := PseudoArchimedeanClass.mk_one_le a
   constructor
   · intro h
     exact lt_of_le_of_ne' (le.mp h.le) (eq.not.mp h.ne.symm)
   · intro h
     exact lt_of_le_of_ne' (le.mpr h.le) (eq.not.mpr h.ne.symm)
 
-theorem ArchimedeanClass.mk_le_one (a : M) : a ≤ 1 ↔ mk a ≤ 1 := by
-  have eq := ArchimedeanClass.mk_eq_one a
-  have lt := ArchimedeanClass.mk_lt_one a
+theorem PseudoArchimedeanClass.mk_le_one (a : M) : a ≤ 1 ↔ mk a ≤ 1 := by
+  have eq := PseudoArchimedeanClass.mk_eq_one a
+  have lt := PseudoArchimedeanClass.mk_lt_one a
   constructor
   · intro h
     obtain h|h := h.lt_or_eq
@@ -471,94 +471,94 @@ variable {M N: Type*}
 variable [CommGroup M] [LinearOrder M] [IsOrderedMonoid M]
 variable [CommGroup N] [LinearOrder N] [IsOrderedMonoid N]
 
-theorem ArchimedeanEquiv.inv {a b : M} (h : ArchimedeanEquiv a b) : ArchimedeanEquiv a⁻¹ b⁻¹ := by
-  unfold ArchimedeanEquiv at h ⊢
+theorem PseudoArchimedeanEquiv.inv {a b : M} (h : PseudoArchimedeanEquiv a b) : PseudoArchimedeanEquiv a⁻¹ b⁻¹ := by
+  unfold PseudoArchimedeanEquiv at h ⊢
   obtain ⟨n, h⟩ := h
   use n
   aesop
 
 
-private instance instSetoid : Setoid M := ArchimedeanEquiv.setoid
-theorem ArchimedeanClass.inv_stable (a b : M) (h : a ≈ b) : ArchimedeanClass.mk a⁻¹ = ArchimedeanClass.mk b⁻¹ := by
-  obtain h: ArchimedeanEquiv a b := h
-  unfold ArchimedeanClass.mk
+private instance instSetoid : Setoid M := PseudoArchimedeanEquiv.setoid
+theorem PseudoArchimedeanClass.inv_stable (a b : M) (h : a ≈ b) : PseudoArchimedeanClass.mk a⁻¹ = PseudoArchimedeanClass.mk b⁻¹ := by
+  obtain h: PseudoArchimedeanEquiv a b := h
+  unfold PseudoArchimedeanClass.mk
   apply Quotient.eq.mpr
   exact h.inv
 
-def ArchimedeanClass.inv : ArchimedeanClass M → ArchimedeanClass M :=
-  Quotient.lift (ArchimedeanClass.mk ·⁻¹) ArchimedeanClass.inv_stable
+def PseudoArchimedeanClass.inv : PseudoArchimedeanClass M → PseudoArchimedeanClass M :=
+  Quotient.lift (PseudoArchimedeanClass.mk ·⁻¹) PseudoArchimedeanClass.inv_stable
 
-theorem ArchimedeanClass.inv_inv (a : ArchimedeanClass M) : a.inv.inv = a := by
-  unfold ArchimedeanClass.inv
-  unfold ArchimedeanClass.mk
+theorem PseudoArchimedeanClass.inv_inv (a : PseudoArchimedeanClass M) : a.inv.inv = a := by
+  unfold PseudoArchimedeanClass.inv
+  unfold PseudoArchimedeanClass.mk
   rw [← Quotient.out_eq a, Quotient.lift_mk, Quotient.lift_mk]
   simp
 
-instance ArchimedeanClass.instInv : InvolutiveInv (ArchimedeanClass M) where
-  inv := ArchimedeanClass.inv
-  inv_inv := ArchimedeanClass.inv_inv
+instance PseudoArchimedeanClass.instInv : InvolutiveInv (PseudoArchimedeanClass M) where
+  inv := PseudoArchimedeanClass.inv
+  inv_inv := PseudoArchimedeanClass.inv_inv
 
-def ArchimedeanClass.inv_def : ∀ (a : ArchimedeanClass M), a⁻¹ = ArchimedeanClass.inv (M := M) a := by
+def PseudoArchimedeanClass.inv_def : ∀ (a : PseudoArchimedeanClass M), a⁻¹ = PseudoArchimedeanClass.inv (M := M) a := by
   intro a
   rfl
 
-def AbsArchimedeanClass (M : Type*) [CommGroup M] [LinearOrder M] [IsOrderedMonoid M] :=
-  {a : ArchimedeanClass M // a ≤ 1}
+def ArchimedeanClass (M : Type*) [CommGroup M] [LinearOrder M] [IsOrderedMonoid M] :=
+  {a : PseudoArchimedeanClass M // a ≤ 1}
 
-def AbsArchimedeanClass.mk (a : M) : AbsArchimedeanClass M :=
-  ⟨ArchimedeanClass.mk (|a|ₘ⁻¹), by
-    apply (ArchimedeanClass.mk_monotone (M := M))
+def ArchimedeanClass.mk (a : M) : ArchimedeanClass M :=
+  ⟨PseudoArchimedeanClass.mk (|a|ₘ⁻¹), by
+    apply (PseudoArchimedeanClass.mk_monotone (M := M))
     simp
   ⟩
 
-theorem AbsArchimedeanClass.mk_inv (a : M) : AbsArchimedeanClass.mk (a⁻¹) = AbsArchimedeanClass.mk a := by
-  unfold AbsArchimedeanClass.mk
+theorem ArchimedeanClass.mk_inv (a : M) : ArchimedeanClass.mk (a⁻¹) = ArchimedeanClass.mk a := by
+  unfold ArchimedeanClass.mk
   simp
 
-theorem AbsArchimedeanClass.mk_mabs (a : M) : AbsArchimedeanClass.mk |a|ₘ = AbsArchimedeanClass.mk a := by
-  unfold AbsArchimedeanClass.mk
+theorem ArchimedeanClass.mk_mabs (a : M) : ArchimedeanClass.mk |a|ₘ = ArchimedeanClass.mk a := by
+  unfold ArchimedeanClass.mk
   simp
 
-instance AbsArchimedeanClass.instOne : One (AbsArchimedeanClass M) where
-  one := AbsArchimedeanClass.mk 1
+instance ArchimedeanClass.instOne : One (ArchimedeanClass M) where
+  one := ArchimedeanClass.mk 1
 
-theorem AbsArchimedeanClass.one_def (M : Type*) [CommGroup M] [LinearOrder M] [IsOrderedMonoid M] :
-  (1 : AbsArchimedeanClass M) = AbsArchimedeanClass.mk 1 := by rfl
+theorem ArchimedeanClass.one_def (M : Type*) [CommGroup M] [LinearOrder M] [IsOrderedMonoid M] :
+  (1 : ArchimedeanClass M) = ArchimedeanClass.mk 1 := by rfl
 
-theorem AbsArchimedeanClass.one_eq : (1 : AbsArchimedeanClass M).val = 1 := by
-  have : (1 : AbsArchimedeanClass M).val = (ArchimedeanClass.mk |1|ₘ⁻¹) := by rfl
+theorem ArchimedeanClass.one_eq : (1 : ArchimedeanClass M).val = 1 := by
+  have : (1 : ArchimedeanClass M).val = (PseudoArchimedeanClass.mk |1|ₘ⁻¹) := by rfl
   rw [this]
-  have : (1 : ArchimedeanClass M) = (ArchimedeanClass.mk 1) := by rfl
+  have : (1 : PseudoArchimedeanClass M) = (PseudoArchimedeanClass.mk 1) := by rfl
   rw [this]
   simp
 
-theorem AbsArchimedeanClass.mk_eq_one (a : M) : a = 1 ↔ mk a = 1 := by
+theorem ArchimedeanClass.mk_eq_one (a : M) : a = 1 ↔ mk a = 1 := by
   constructor
   · intro h
     rw [h]
     rfl
   · intro h
-    unfold AbsArchimedeanClass.mk at h
+    unfold ArchimedeanClass.mk at h
     obtain h := Subtype.ext_iff_val.mp h
     simp only at h
-    rw [AbsArchimedeanClass.one_eq] at h
-    obtain h := (ArchimedeanClass.mk_eq_one _).mpr h
+    rw [ArchimedeanClass.one_eq] at h
+    obtain h := (PseudoArchimedeanClass.mk_eq_one _).mpr h
     simpa using h
 
 noncomputable
-instance AbsArchimedeanClass.instLinearOrder : LinearOrder (AbsArchimedeanClass M) := by
-  unfold AbsArchimedeanClass
+instance ArchimedeanClass.instLinearOrder : LinearOrder (ArchimedeanClass M) := by
+  unfold ArchimedeanClass
   infer_instance
 
-theorem AbsArchimedeanClass.le_one (u : AbsArchimedeanClass M) : u ≤ 1 := by
+theorem ArchimedeanClass.le_one (u : ArchimedeanClass M) : u ≤ 1 := by
   apply Subtype.coe_le_coe.mp
-  rw [AbsArchimedeanClass.one_eq]
+  rw [ArchimedeanClass.one_eq]
   exact u.prop
 
-theorem AbsArchimedeanClass.eq_iff (a b : M) :
-    AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk b ↔
+theorem ArchimedeanClass.eq_iff (a b : M) :
+    ArchimedeanClass.mk a = ArchimedeanClass.mk b ↔
     (∃ n, n ≠ 0 ∧ |a|ₘ ≤ |b|ₘ ^ n) ∧ (∃ n, n ≠ 0 ∧ |b|ₘ ≤ |a|ₘ ^ n) := by
-  unfold AbsArchimedeanClass.mk ArchimedeanClass.mk
+  unfold ArchimedeanClass.mk PseudoArchimedeanClass.mk
   rw [Subtype.mk_eq_mk, Quotient.eq]
   constructor
   · intro ⟨n, ⟨hn0, hn⟩⟩
@@ -595,9 +595,9 @@ theorem AbsArchimedeanClass.eq_iff (a b : M) :
     · rw [← hb0] at ⊢ hm
       simp only [one_pow, mabs_le_one] at hm
       rw [hm]
-      simpa using ArchimedeanEquiv.refl 1
+      simpa using PseudoArchimedeanEquiv.refl 1
     · have : (mabs b)⁻¹ < 1 := by exact Left.inv_lt_one_iff.mpr hb0
-      apply (archimedeanEquiv_iff_of_right_lt_one _ _ this).mpr
+      apply (PseudoArchimedeanEquiv.iff_of_right_lt_one _ _ this).mpr
       use max m n
       constructor
       · aesop
@@ -612,8 +612,8 @@ theorem AbsArchimedeanClass.eq_iff (a b : M) :
           · exact hab
           · exact hm.trans <| pow_le_pow_right' (by simp) (by simp)
 
-theorem AbsArchimedeanClass.lt_iff (a b : M) :
-    AbsArchimedeanClass.mk a < AbsArchimedeanClass.mk b ↔
+theorem ArchimedeanClass.lt_iff (a b : M) :
+    ArchimedeanClass.mk a < ArchimedeanClass.mk b ↔
     ∀n, |b|ₘ ^ n < |a|ₘ := by
   constructor
   · intro h
@@ -624,14 +624,14 @@ theorem AbsArchimedeanClass.lt_iff (a b : M) :
       contrapose! h
       obtain hb0' := mabs_eq_one.mp hb0.symm
       rw [h, hb0']
-    · unfold AbsArchimedeanClass.mk ArchimedeanClass.mk at h
+    · unfold ArchimedeanClass.mk PseudoArchimedeanClass.mk at h
       rw [Subtype.mk_lt_mk] at h
-      obtain h' := ArchimedeanClass.mk_monotone.reflect_lt h
+      obtain h' := PseudoArchimedeanClass.mk_monotone.reflect_lt h
       simp only [inv_lt_inv_iff] at h'
       obtain h'' := ne_of_lt h
       simp only [ne_eq] at h''
       rw [Quotient.eq] at h''
-      obtain h'' := (not_iff_not.mpr (archimedeanEquiv_iff_of_right_lt_one _ _ (inv_lt_one'.mpr hb0))).mp h''
+      obtain h'' := (not_iff_not.mpr (PseudoArchimedeanEquiv.iff_of_right_lt_one _ _ (inv_lt_one'.mpr hb0))).mp h''
       simp only [ne_eq, inv_le_inv_iff, inv_pow, not_exists, not_and, not_le, not_or] at h''
       intro n
       by_cases hn0 : n = 0
@@ -641,22 +641,22 @@ theorem AbsArchimedeanClass.lt_iff (a b : M) :
       · exact (h'' n hn0).1 h'.le
   · intro h
     apply lt_of_le_of_ne
-    · unfold AbsArchimedeanClass.mk ArchimedeanClass.mk
+    · unfold ArchimedeanClass.mk PseudoArchimedeanClass.mk
       rw [Subtype.mk_le_mk]
-      apply ArchimedeanClass.mk_monotone
+      apply PseudoArchimedeanClass.mk_monotone
       obtain h := h 1
       simp only [pow_one] at h
       simp only [inv_le_inv_iff]
       exact le_of_lt h
     · contrapose! h
-      rw [AbsArchimedeanClass.eq_iff] at h
+      rw [ArchimedeanClass.eq_iff] at h
       aesop
 
-theorem AbsArchimedeanClass.mk_mul_self {a b : M} (hab : mk a = mk b) : mk a ≤ mk (a * b) := by
+theorem ArchimedeanClass.mk_mul_self {a b : M} (hab : mk a = mk b) : mk a ≤ mk (a * b) := by
   by_contra! h
   obtain h2 := hab ▸ h
-  obtain h1 := (AbsArchimedeanClass.lt_iff _ _).mp h  2
-  obtain h2 := (AbsArchimedeanClass.lt_iff _ _).mp h2  2
+  obtain h1 := (ArchimedeanClass.lt_iff _ _).mp h  2
+  obtain h2 := (ArchimedeanClass.lt_iff _ _).mp h2  2
   rw [pow_two] at h1 h2
   have h1 := lt_of_lt_of_le h1 (mabs_mul _ _)
   have h2 := lt_of_lt_of_le h2 (mabs_mul _ _)
@@ -664,9 +664,9 @@ theorem AbsArchimedeanClass.mk_mul_self {a b : M} (hab : mk a = mk b) : mk a ≤
   have := h1.trans h2
   simp at this
 
-theorem AbsArchimedeanClass.mk_mul_of_lt {a b : M} (h : mk a < mk b) : mk a = mk (a * b) := by
-  obtain h := (AbsArchimedeanClass.lt_iff _ _).mp h
-  apply (AbsArchimedeanClass.eq_iff _ _).mpr
+theorem ArchimedeanClass.mk_mul_of_lt {a b : M} (h : mk a < mk b) : mk a = mk (a * b) := by
+  obtain h := (ArchimedeanClass.lt_iff _ _).mp h
+  apply (ArchimedeanClass.eq_iff _ _).mpr
   constructor
   · use 2
     constructor
@@ -688,27 +688,27 @@ theorem AbsArchimedeanClass.mk_mul_of_lt {a b : M} (h : mk a < mk b) : mk a = mk
       simp only [mul_le_mul_iff_left]
       simpa using (h 1).le
 
-theorem AbsArchimedeanClass.mk_mul (a b : M) : min (mk a) (mk b) ≤ mk (a * b) := by
+theorem ArchimedeanClass.mk_mul (a b : M) : min (mk a) (mk b) ≤ mk (a * b) := by
   obtain hab|hab|hab := lt_trichotomy (mk a) (mk b)
   · simp only [inf_le_iff]
     left
-    exact (AbsArchimedeanClass.mk_mul_of_lt hab).le
+    exact (ArchimedeanClass.mk_mul_of_lt hab).le
   · rw [← hab]
-    simpa using AbsArchimedeanClass.mk_mul_self hab
+    simpa using ArchimedeanClass.mk_mul_self hab
   · simp only [inf_le_iff]
     right
     rw [mul_comm]
-    exact (AbsArchimedeanClass.mk_mul_of_lt hab).le
+    exact (ArchimedeanClass.mk_mul_of_lt hab).le
 
-theorem AbsArchimedeanClass.mk_mul_of_one_le {a b : M} (ha : 1 ≤ a) (hb : 1 ≤ b) :
+theorem ArchimedeanClass.mk_mul_of_one_le {a b : M} (ha : 1 ≤ a) (hb : 1 ≤ b) :
   min (mk a) (mk b) = mk (a * b) := by
   obtain lt|eq|gt := lt_trichotomy (mk a) (mk b)
-  · rw [← AbsArchimedeanClass.mk_mul_of_lt lt]
+  · rw [← ArchimedeanClass.mk_mul_of_lt lt]
     exact min_eq_left_of_lt lt
   · rw [eq]
     simp only [min_self]
-    rw [AbsArchimedeanClass.eq_iff] at eq
-    rw [AbsArchimedeanClass.eq_iff]
+    rw [ArchimedeanClass.eq_iff] at eq
+    rw [ArchimedeanClass.eq_iff]
     rw [mabs_eq_self.mpr ha, mabs_eq_self.mpr hb] at eq
     have hab : 1 ≤ a * b := by exact one_le_mul ha hb
     rw [mabs_eq_self.mpr hb, mabs_eq_self.mpr hab]
@@ -727,56 +727,57 @@ theorem AbsArchimedeanClass.mk_mul_of_one_le {a b : M} (ha : 1 ≤ a) (hb : 1 �
         simp only [pow_one, mul_le_mul_iff_right]
         exact hm
   · rw [mul_comm]
-    rw [← AbsArchimedeanClass.mk_mul_of_lt gt]
+    rw [← ArchimedeanClass.mk_mul_of_lt gt]
     exact min_eq_right_of_lt gt
 
-theorem AbsArchimedeanClass.lt_of_mk_lt_mk {a b : M} (h : mk a < mk b) (hpos : 1 ≤ a) : b < a := by
-  obtain h := (AbsArchimedeanClass.lt_iff _ _).mp h 1
+theorem ArchimedeanClass.lt_of_mk_lt_mk {a b : M} (h : mk a < mk b) (hpos : 1 ≤ a) : b < a := by
+  obtain h := (ArchimedeanClass.lt_iff _ _).mp h 1
   rw [pow_one, mabs_lt, mabs_eq_self.mpr hpos] at h
   exact h.2
 
 noncomputable
-abbrev AbsArchimedeanClass.out (a : AbsArchimedeanClass M) : M := a.val.out
+abbrev ArchimedeanClass.out (a : ArchimedeanClass M) : M := a.val.out
 
-theorem AbsArchimedeanClass.out_injective : Function.Injective (AbsArchimedeanClass.out (M := M)) := by
-  unfold AbsArchimedeanClass.out
+theorem ArchimedeanClass.out_injective : Function.Injective (ArchimedeanClass.out (M := M)) := by
+  unfold ArchimedeanClass.out
   exact Quotient.out_injective.comp Subtype.val_injective
 
-theorem AbsArchimedeanClass.one_out : (1 : AbsArchimedeanClass M).out = 1 := by
-  unfold AbsArchimedeanClass.out
-  rw [AbsArchimedeanClass.one_eq]
-  apply ArchimedeanClass.one_out
+theorem ArchimedeanClass.one_out : (1 : ArchimedeanClass M).out = 1 := by
+  unfold ArchimedeanClass.out
+  rw [ArchimedeanClass.one_eq]
+  apply PseudoArchimedeanClass.one_out
 
 
-theorem AbsArchimedeanClass.out_le_one (a : AbsArchimedeanClass M) : a.out ≤ 1 := by
-  unfold AbsArchimedeanClass.out
-  apply (ArchimedeanClass.mk_le_one _).mpr
-  unfold ArchimedeanClass.mk
+theorem ArchimedeanClass.out_le_one (a : ArchimedeanClass M) : a.out ≤ 1 := by
+  unfold ArchimedeanClass.out
+  apply (PseudoArchimedeanClass.mk_le_one _).mpr
+  unfold PseudoArchimedeanClass.mk
   rw [Quotient.out_eq]
   exact a.prop
 
-theorem AbsArchimedeanClass.out_eq_one (a : AbsArchimedeanClass M) : a.out = 1 ↔ a = 1 := by
+theorem ArchimedeanClass.out_eq_one (a : ArchimedeanClass M) : a.out = 1 ↔ a = 1 := by
   constructor
   · intro h
-    rw [← AbsArchimedeanClass.one_out] at h
-    exact AbsArchimedeanClass.out_injective h
+    rw [← ArchimedeanClass.one_out] at h
+    exact ArchimedeanClass.out_injective h
   · intro h
     rw [h]
-    apply AbsArchimedeanClass.one_out
+    apply ArchimedeanClass.one_out
 
-theorem AbsArchimedeanClass.out_eq (a : AbsArchimedeanClass M) : mk a.out = a := by
-  unfold AbsArchimedeanClass.mk ArchimedeanClass.mk
+theorem ArchimedeanClass.out_eq (a : ArchimedeanClass M) : mk a.out = a := by
+  unfold ArchimedeanClass.mk PseudoArchimedeanClass.mk
   apply Subtype.eq
   simp only
   rw [Quotient.mk_eq_iff_out]
   use 1
   simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, inv_pow, true_and]
-  rw [mabs_eq_inv_self.mpr (AbsArchimedeanClass.out_le_one _)]
+  rw [mabs_eq_inv_self.mpr (ArchimedeanClass.out_le_one _)]
   simp
 
-instance AbsArchimedeanClass.instOrderTop : OrderTop (AbsArchimedeanClass M) where
+noncomputable
+instance ArchimedeanClass.instOrderTop : OrderTop (ArchimedeanClass M) where
   top := 1
-  le_top := AbsArchimedeanClass.le_one
+  le_top := ArchimedeanClass.le_one
 
 theorem OrderHom.map_max {α β F: Type*} [LinearOrder α] [LinearOrder β] [FunLike F α β]
       [OrderHomClass F α β] (f : F) (a b : α):
@@ -793,30 +794,23 @@ theorem OrderMonoidHom.map_mabs {α β F : Type*} [Group α] [Group β] [LinearO
   rw [← OrderHom.map_max]
   simp
 
-/-theorem MonoidHom.map_pow' {α β F : Type*} [Monoid α] [Monoid β] [FunLike F α β]
-    [MonoidHomClass F α β] (f : F) (a : α) (n : ℕ):
-    f (a ^ n) = f a ^ n := by
-  have : f (a ^ n) = (MonoidHomClass.toMonoidHom f) (a ^ n) := by rfl
-  rw [this, MonoidHom.map_pow]
-  simp-/
+noncomputable
+abbrev ArchimedeanClass.orderHomFun {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) (a : ArchimedeanClass M) : ArchimedeanClass N :=
+  ArchimedeanClass.mk (f a.out)
 
 noncomputable
-abbrev AbsArchimedeanClass.orderHomFun {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
-    (f : F) (a : AbsArchimedeanClass M) : AbsArchimedeanClass N :=
-  AbsArchimedeanClass.mk (f a.out)
+def ArchimedeanClass.orderHom {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) : ArchimedeanClass M →o ArchimedeanClass N where
 
-noncomputable
-def AbsArchimedeanClass.orderHom {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
-    (f : F) : AbsArchimedeanClass M →o AbsArchimedeanClass N where
-
-  toFun := AbsArchimedeanClass.orderHomFun f
+  toFun := ArchimedeanClass.orderHomFun f
   monotone' := by
     intro a b h
     contrapose! h
-    unfold AbsArchimedeanClass.orderHomFun at h
-    rw [AbsArchimedeanClass.lt_iff] at h
-    rw [← AbsArchimedeanClass.out_eq a, ← AbsArchimedeanClass.out_eq b]
-    rw [AbsArchimedeanClass.lt_iff]
+    unfold ArchimedeanClass.orderHomFun at h
+    rw [ArchimedeanClass.lt_iff] at h
+    rw [← ArchimedeanClass.out_eq a, ← ArchimedeanClass.out_eq b]
+    rw [ArchimedeanClass.lt_iff]
     intro n
     obtain h := h n
     contrapose! h
@@ -825,15 +819,15 @@ def AbsArchimedeanClass.orderHom {F : Type*} [FunLike F M N] [OrderHomClass F M 
     rw [← OrderMonoidHom.map_mabs, ← OrderMonoidHom.map_mabs] at h
     exact h
 
-theorem AbsArchimedeanClass.orderHom_comm_mk {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+theorem ArchimedeanClass.orderHom_comm_mk {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
     (f : F) (a : M):
-    AbsArchimedeanClass.mk (f a) = (AbsArchimedeanClass.orderHom f) (AbsArchimedeanClass.mk a) := by
-  unfold AbsArchimedeanClass.orderHom AbsArchimedeanClass.orderHomFun
+    ArchimedeanClass.mk (f a) = (ArchimedeanClass.orderHom f) (ArchimedeanClass.mk a) := by
+  unfold ArchimedeanClass.orderHom ArchimedeanClass.orderHomFun
   simp
-  apply (AbsArchimedeanClass.eq_iff _ _).mpr
-  have a_eq : AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk (AbsArchimedeanClass.mk a).out := by
-    rw [AbsArchimedeanClass.out_eq]
-  obtain ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩ := (AbsArchimedeanClass.eq_iff _ _).mp a_eq
+  apply (ArchimedeanClass.eq_iff _ _).mpr
+  have a_eq : ArchimedeanClass.mk a = ArchimedeanClass.mk (ArchimedeanClass.mk a).out := by
+    rw [ArchimedeanClass.out_eq]
+  obtain ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩ := (ArchimedeanClass.eq_iff _ _).mp a_eq
   constructor <;> [use m; use n]
   <;> [refine ⟨hm0, ?_⟩; refine ⟨hn0, ?_⟩]
   all_goals
@@ -843,63 +837,113 @@ theorem AbsArchimedeanClass.orderHom_comm_mk {F : Type*} [FunLike F M N] [OrderH
     try exact hm
     try exact hn
 
-theorem AbsArchimedeanClass.orderHom_one {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+theorem ArchimedeanClass.orderHom_one {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
     (f : F) :
-    (AbsArchimedeanClass.orderHom f) 1 = 1 := by
-  rw [AbsArchimedeanClass.one_def]
-  rw [← AbsArchimedeanClass.orderHom_comm_mk]
+    (ArchimedeanClass.orderHom f) 1 = 1 := by
+  rw [ArchimedeanClass.one_def]
+  rw [← ArchimedeanClass.orderHom_comm_mk]
   simp only [map_one]
-  rw [AbsArchimedeanClass.one_def]
+  rw [ArchimedeanClass.one_def]
 
-/-def AbsArchimedeanClass.orderHom_topHom
+/-def ArchimedeanClass.orderHom_topHom
     {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N] (f : F) :
-    TopHom (AbsArchimedeanClass M) (AbsArchimedeanClass N) := by sorry-/
+    TopHom (ArchimedeanClass M) (ArchimedeanClass N) := by sorry-/
 
-theorem AbsArchimedeanClass.orderHom_surjective {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+theorem ArchimedeanClass.orderHom_surjective {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
     (f : F) (h : Function.Surjective f) :
-    Function.Surjective (AbsArchimedeanClass.orderHom f) := by
+    Function.Surjective (ArchimedeanClass.orderHom f) := by
   intro a
   obtain ⟨b, hb⟩ := h a.out
-  use AbsArchimedeanClass.mk b
-  rw [← AbsArchimedeanClass.orderHom_comm_mk, hb]
-  rw [AbsArchimedeanClass.out_eq]
+  use ArchimedeanClass.mk b
+  rw [← ArchimedeanClass.orderHom_comm_mk, hb]
+  rw [ArchimedeanClass.out_eq]
 
-/-theorem AbsArchimedeanClass.orderHom_injOn {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+/-theorem ArchimedeanClass.orderHom_injOn {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
     (f : F) (s : Set M)
-    (h : ∀ a ∈ s, ∀ b ∈ s, (AbsArchimedeanClass.mk (f a) = AbsArchimedeanClass.mk (f b) → AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk b)) :
-    Set.InjOn (AbsArchimedeanClass.orderHom f) -/
+    (h : ∀ a ∈ s, ∀ b ∈ s, (ArchimedeanClass.mk (f a) = ArchimedeanClass.mk (f b) → ArchimedeanClass.mk a = ArchimedeanClass.mk b)) :
+    Set.InjOn (ArchimedeanClass.orderHom f) -/
+
+--------------------------------------------------------------------------
+
+noncomputable
+def ArchimedeanClass.classOrderEmbeddingFun (s : Subgroup M) (a : ArchimedeanClass s) :
+    ArchimedeanClass M := ArchimedeanClass.mk a.out.val
+
+noncomputable
+def ArchimedeanClass.classOrderEmbedding (s : Subgroup M) :
+    (ArchimedeanClass s) ↪o (ArchimedeanClass M) where
+  toFun := ArchimedeanClass.classOrderEmbeddingFun s
+  inj' := by
+    intro a b
+    unfold ArchimedeanClass.classOrderEmbeddingFun
+    nth_rw 2 [← ArchimedeanClass.out_eq a]
+    nth_rw 2 [← ArchimedeanClass.out_eq b]
+    rw [ArchimedeanClass.eq_iff, ArchimedeanClass.eq_iff]
+    intro ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩
+    refine ⟨⟨m, hm0, ?_⟩, ⟨n, hn0, ?_⟩⟩
+    · simpa using hm
+    · simpa using hn
+  map_rel_iff' := by
+    intro a b
+    unfold ArchimedeanClass.classOrderEmbeddingFun
+    apply not_iff_not.mp
+    simp only [Function.Embedding.coeFn_mk, not_le]
+    nth_rw 2 [← ArchimedeanClass.out_eq a]
+    nth_rw 2 [← ArchimedeanClass.out_eq b]
+    rw [ArchimedeanClass.lt_iff, ArchimedeanClass.lt_iff]
+    constructor
+    all_goals
+    · intro h n
+      simpa using h n
+
+theorem ArchimedeanClass.classOrderEmbedding_one (s : Subgroup M) :
+    (ArchimedeanClass.classOrderEmbedding s) 1 = 1 := by
+  unfold ArchimedeanClass.classOrderEmbedding ArchimedeanClass.classOrderEmbeddingFun
+  simp only [RelEmbedding.coe_mk, Function.Embedding.coeFn_mk]
+  rw [ArchimedeanClass.one_out]
+  simp only [OneMemClass.coe_one]
+  apply ArchimedeanClass.one_def
+
+theorem ArchimedeanClass.classOrderEmbedding_comm_mk (s : Subgroup M) (a : s):
+    ArchimedeanClass.mk (a.val) = (ArchimedeanClass.classOrderEmbedding s) (ArchimedeanClass.mk a) := by
+  unfold ArchimedeanClass.classOrderEmbedding ArchimedeanClass.classOrderEmbeddingFun
+  simp only [RelEmbedding.coe_mk, Function.Embedding.coeFn_mk]
+  have h : mk a = mk ((mk a).out) := by
+    rw [ArchimedeanClass.out_eq]
+  rw [ArchimedeanClass.eq_iff] at ⊢ h
+  exact h
 
 --------------------------------------------------------------------------------------------------------
 
 
-def ArchimedeanSubgroup (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] : Subgroup M where
-  carrier := AbsArchimedeanClass.mk ⁻¹' s.carrier
+def ArchimedeanSubgroup (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] : Subgroup M where
+  carrier := ArchimedeanClass.mk ⁻¹' s.carrier
   mul_mem' := by
     intro a b ha hb
     simp only [Set.mem_preimage] at ha hb ⊢
-    obtain h|h := min_le_iff.mp (AbsArchimedeanClass.mk_mul a b)
+    obtain h|h := min_le_iff.mp (ArchimedeanClass.mk_mul a b)
     · apply s.upper' h ha
     · apply s.upper' h hb
   one_mem' := by
     simp only [Set.mem_preimage]
     obtain ⟨u, hu⟩ := hempty
-    simpa using s.upper' (AbsArchimedeanClass.le_one u) hu
+    simpa using s.upper' (ArchimedeanClass.le_one u) hu
   inv_mem' := by
     intro a h
     simp [Set.mem_preimage] at h ⊢
-    rw [AbsArchimedeanClass.mk_inv]
+    rw [ArchimedeanClass.mk_inv]
     exact h
 
 
 instance ArchimedeanSubgroup.instLinearOrder
-    (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
   LinearOrder (ArchimedeanSubgroup s) := by infer_instance
 
 instance ArchimedeanSubgroup.instIsOrderedMonoid
-    (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
   IsOrderedMonoid (ArchimedeanSubgroup s) := by infer_instance
 
-theorem ArchimedeanSubgroup.le (s t : UpperSet (AbsArchimedeanClass M))
+theorem ArchimedeanSubgroup.le (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] (hst : s.carrier ⊆ t.carrier) :
     ArchimedeanSubgroup s ≤ ArchimedeanSubgroup t := by
   unfold ArchimedeanSubgroup
@@ -907,55 +951,91 @@ theorem ArchimedeanSubgroup.le (s t : UpperSet (AbsArchimedeanClass M))
   refine (Set.preimage_subset_preimage_iff ?_).mpr ?_
   · intro a h
     use a.val.out
-    unfold AbsArchimedeanClass.mk ArchimedeanClass.mk
+    unfold ArchimedeanClass.mk PseudoArchimedeanClass.mk
     apply Subtype.eq_iff.mpr
     simp only
     rw [mabs_eq_inv_self.mpr (by
-      rw [← ArchimedeanClass.one_mk_out]
-      exact (ArchimedeanClass.le_def a.val 1).mp a.prop
+      rw [← PseudoArchimedeanClass.one_mk_out]
+      exact (PseudoArchimedeanClass.le_def a.val 1).mp a.prop
     )]
     simp only [inv_inv, Quotient.out_eq]
   · exact hst
 
-abbrev ArchimedeanQuotient (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :=
+noncomputable
+def ArchimedeanSubgroup.classOrderEmbedding
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+  ArchimedeanClass (ArchimedeanSubgroup s) ↪o s.carrier where
+  toFun := fun a ↦ ⟨ArchimedeanClass.classOrderEmbedding (ArchimedeanSubgroup s) a, by
+    exact Set.mem_preimage.mp a.out.prop
+  ⟩
+  inj' := by
+    intro a b h
+    simpa using h
+  map_rel_iff' := by simp
+
+noncomputable
+def ArchimedeanSubgroup.classOrderIso
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    ArchimedeanClass (ArchimedeanSubgroup s) ≃o s.carrier :=
+  RelIso.ofSurjective (ArchimedeanSubgroup.classOrderEmbedding s) (by
+    intro a
+    use ArchimedeanClass.mk ⟨a.val.out, by
+      unfold ArchimedeanSubgroup
+      simp only [Subgroup.mem_mk, Set.mem_preimage]
+      rw [ArchimedeanClass.out_eq]
+      exact a.prop
+    ⟩
+    unfold ArchimedeanSubgroup.classOrderEmbedding
+    simp only [RelEmbedding.coe_mk, Function.Embedding.coeFn_mk]
+    simp_rw [← ArchimedeanClass.classOrderEmbedding_comm_mk]
+    apply Subtype.eq
+    simp only
+    rw [ArchimedeanClass.out_eq]
+  )
+
+
+----------------------------------------------------------------------
+
+abbrev ArchimedeanQuotient (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :=
   M ⧸ ArchimedeanSubgroup s
 
-abbrev ArchimedeanQuotient.mk (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+abbrev ArchimedeanQuotient.mk (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
     ArchimedeanQuotient s :=
   a
 
-theorem ArchimedeanQuotient.eq_iff (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a b : M) :
-    ArchimedeanQuotient.mk s a = ArchimedeanQuotient.mk s b ↔ (AbsArchimedeanClass.mk (a⁻¹ * b)) ∈ s.carrier := by
+theorem ArchimedeanQuotient.eq_iff (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a b : M) :
+    ArchimedeanQuotient.mk s a = ArchimedeanQuotient.mk s b ↔ (ArchimedeanClass.mk (a⁻¹ * b)) ∈ s.carrier := by
   rw [QuotientGroup.eq]
   unfold ArchimedeanSubgroup
   simp
 
-theorem ArchimedeanQuotient.mk_out (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
-    (AbsArchimedeanClass.mk (a⁻¹ * (ArchimedeanQuotient.mk s a).out)) ∈ s.carrier := by
+theorem ArchimedeanQuotient.mk_out (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+    (ArchimedeanClass.mk (a⁻¹ * (ArchimedeanQuotient.mk s a).out)) ∈ s.carrier := by
   rw [← ArchimedeanQuotient.eq_iff]
   simp
 
-theorem ArchimedeanQuotient.mk_out' (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
-    (AbsArchimedeanClass.mk ((ArchimedeanQuotient.mk s a).out⁻¹ * a)) ∈ s.carrier := by
+theorem ArchimedeanQuotient.mk_out' (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : M) :
+    (ArchimedeanClass.mk ((ArchimedeanQuotient.mk s a).out⁻¹ * a)) ∈ s.carrier := by
   rw [← ArchimedeanQuotient.eq_iff]
   simp
 
 noncomputable
-instance ArchimedeanQuotient.instLinearOrder (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+instance ArchimedeanQuotient.instLinearOrder (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     LinearOrder (ArchimedeanQuotient s) :=
   LinearOrder.lift' (·.out) Quotient.out_injective
 
-theorem ArchimedeanQuotient.le_def (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+theorem ArchimedeanQuotient.le_def (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     ∀ (x y : ArchimedeanQuotient s), x ≤ y ↔ x.out ≤ y.out := by
   intro x y
   rfl
 
-theorem ArchimedeanQuotient.lt_def (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+theorem ArchimedeanQuotient.lt_def (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     ∀ (x y : ArchimedeanQuotient s), x < y ↔ x.out < y.out := by
   intro x y
   rfl
 
-def ArchimedeanQuotient.orderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+noncomputable
+def ArchimedeanQuotient.orderMonoidHom (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     (M →*o ArchimedeanQuotient s) := {
   (QuotientGroup.mk' (ArchimedeanSubgroup s) : M →* ArchimedeanQuotient s) with
   monotone' := by
@@ -967,7 +1047,7 @@ def ArchimedeanQuotient.orderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [h
       congr
     · have hne : a ≠ b := by aesop
       have hpos : 1 ≤ a⁻¹ * b := by aesop
-      have hnotmem : AbsArchimedeanClass.mk (a⁻¹ * b) ∉ s.carrier :=
+      have hnotmem : ArchimedeanClass.mk (a⁻¹ * b) ∉ s.carrier :=
         (not_iff_not.mpr (ArchimedeanQuotient.eq_iff _ _ _)).mp heq
       apply le_of_lt
       suffices 1 < (ArchimedeanQuotient.mk s a).out⁻¹ * (ArchimedeanQuotient.mk s b).out by
@@ -982,8 +1062,8 @@ def ArchimedeanQuotient.orderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [h
         apply inv_lt_iff_one_lt_mul.mp
         rw [mul_inv, mul_inv, mul_inv]
         simpa using this
-      refine AbsArchimedeanClass.lt_of_mk_lt_mk ?_ hpos
-      refine lt_of_lt_of_le ?_ (AbsArchimedeanClass.mk_mul _ _)
+      refine ArchimedeanClass.lt_of_mk_lt_mk ?_ hpos
+      refine lt_of_lt_of_le ?_ (ArchimedeanClass.mk_mul _ _)
       apply lt_min
       · contrapose! hnotmem with hclassle
         apply s.upper' hclassle
@@ -993,12 +1073,12 @@ def ArchimedeanQuotient.orderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [h
         apply ArchimedeanQuotient.mk_out'
 }
 
-theorem ArchimedeanQuotient.surjective_OrderMonoidHom (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+theorem ArchimedeanQuotient.surjective_OrderMonoidHom (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     Function.Surjective (ArchimedeanQuotient.orderMonoidHom s) := by
   apply Quotient.mk_surjective
 
 -- TODO: extract a theorem: a surjective OrderMonidHom implies IsOrderedMonoid domain
-instance ArchimedeanQuotient.instIsOrderedMonoid (s : UpperSet (AbsArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+instance ArchimedeanQuotient.instIsOrderedMonoid (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
     IsOrderedMonoid (ArchimedeanQuotient s) where
   mul_le_mul_left (a b) := by
     intro h c
@@ -1016,20 +1096,20 @@ instance ArchimedeanQuotient.instIsOrderedMonoid (s : UpperSet (AbsArchimedeanCl
       apply (ArchimedeanQuotient.orderMonoidHom s).toOrderHom.monotone
       exact le_of_lt <| mul_lt_mul_left' this c'
 
-theorem ArchimedeanQuotient.class_one (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier]
+theorem ArchimedeanQuotient.class_one (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]
     (a : M) :
-  AbsArchimedeanClass.mk (ArchimedeanQuotient.mk s a) = 1 ↔ AbsArchimedeanClass.mk a ∈ s.carrier := by
-  rw [← AbsArchimedeanClass.mk_eq_one]
+  ArchimedeanClass.mk (ArchimedeanQuotient.mk s a) = 1 ↔ ArchimedeanClass.mk a ∈ s.carrier := by
+  rw [← ArchimedeanClass.mk_eq_one]
   rw [QuotientGroup.eq_one_iff]
   unfold ArchimedeanSubgroup
   simp
 
 noncomputable
-def ArchimedeanQuotient.classOrderHom (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
-    (s.carrierᶜ ∪ {1} : Set (AbsArchimedeanClass M)) →o (AbsArchimedeanClass (ArchimedeanQuotient s)) :=
-  (AbsArchimedeanClass.orderHom (ArchimedeanQuotient.orderMonoidHom s)).comp (OrderHom.Subtype.val _)
+def ArchimedeanQuotient.classOrderHom (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    (s.carrierᶜ ∪ {1} : Set (ArchimedeanClass M)) →o (ArchimedeanClass (ArchimedeanQuotient s)) :=
+  (ArchimedeanClass.orderHom (ArchimedeanQuotient.orderMonoidHom s)).comp (OrderHom.Subtype.val _)
 
-theorem ArchimedeanQuotient.classOrderHom_surjective (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+theorem ArchimedeanQuotient.classOrderHom_surjective (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
     Function.Surjective (ArchimedeanQuotient.classOrderHom s) := by
   intro a
   unfold ArchimedeanQuotient.classOrderHom
@@ -1038,26 +1118,26 @@ theorem ArchimedeanQuotient.classOrderHom_surjective (s : UpperSet (AbsArchimede
   by_cases ha : a = 1
   · left
     rw [ha]
-    rw [AbsArchimedeanClass.orderHom_one]
+    rw [ArchimedeanClass.orderHom_one]
   · right
-    obtain ⟨b, h⟩ := AbsArchimedeanClass.orderHom_surjective (ArchimedeanQuotient.orderMonoidHom s)
+    obtain ⟨b, h⟩ := ArchimedeanClass.orderHom_surjective (ArchimedeanQuotient.orderMonoidHom s)
       (ArchimedeanQuotient.surjective_OrderMonoidHom s) a
     use b
     constructor
     · contrapose! ha
       rw [← h]
-      unfold AbsArchimedeanClass.orderHom AbsArchimedeanClass.orderHomFun
+      unfold ArchimedeanClass.orderHom ArchimedeanClass.orderHomFun
       simp only [OrderHom.coe_mk]
-      apply (AbsArchimedeanClass.mk_eq_one _).mp
+      apply (ArchimedeanClass.mk_eq_one _).mp
       unfold ArchimedeanQuotient.orderMonoidHom
       simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply, QuotientGroup.eq_one_iff]
       unfold ArchimedeanSubgroup
       simp only [Subgroup.mem_mk, Set.mem_preimage]
-      rw [AbsArchimedeanClass.out_eq]
+      rw [ArchimedeanClass.out_eq]
       exact ha
     · exact h
 
-theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
     Function.Injective (ArchimedeanQuotient.classOrderHom s) := by
 
   intro a b
@@ -1071,25 +1151,25 @@ theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (AbsArchimedea
   · obtain h1|h1 := h1
     ---- TODO: optimize this
     · rw [h1]
-      rw [AbsArchimedeanClass.orderHom_one]
-      unfold AbsArchimedeanClass.orderHom AbsArchimedeanClass.orderHomFun orderMonoidHom
+      rw [ArchimedeanClass.orderHom_one]
+      unfold ArchimedeanClass.orderHom ArchimedeanClass.orderHomFun orderMonoidHom
       simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply, OrderHom.coe_mk]
       intro h
-      obtain h := (QuotientGroup.eq_one_iff _).mp ((AbsArchimedeanClass.mk_eq_one _).mpr h.symm)
+      obtain h := (QuotientGroup.eq_one_iff _).mp ((ArchimedeanClass.mk_eq_one _).mpr h.symm)
       unfold ArchimedeanSubgroup at h
       simp only [Subgroup.mem_mk, Set.mem_preimage] at h
-      rw [AbsArchimedeanClass.out_eq] at h
+      rw [ArchimedeanClass.out_eq] at h
       obtain h := Set.not_mem_compl_iff.mpr h
       exact (Set.mem_singleton_iff.mp ((or_iff_right h).mp hb)).symm
     · rw [h1]
-      rw [AbsArchimedeanClass.orderHom_one]
-      unfold AbsArchimedeanClass.orderHom AbsArchimedeanClass.orderHomFun orderMonoidHom
+      rw [ArchimedeanClass.orderHom_one]
+      unfold ArchimedeanClass.orderHom ArchimedeanClass.orderHomFun orderMonoidHom
       simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply, OrderHom.coe_mk]
       intro h
-      obtain h := (QuotientGroup.eq_one_iff _).mp ((AbsArchimedeanClass.mk_eq_one _).mpr h) --
+      obtain h := (QuotientGroup.eq_one_iff _).mp ((ArchimedeanClass.mk_eq_one _).mpr h) --
       unfold ArchimedeanSubgroup at h
       simp only [Subgroup.mem_mk, Set.mem_preimage] at h
-      rw [AbsArchimedeanClass.out_eq] at h
+      rw [ArchimedeanClass.out_eq] at h
       obtain h := Set.not_mem_compl_iff.mpr h
       exact (Set.mem_singleton_iff.mp ((or_iff_right h).mp ha)) --
   · simp only [not_or] at h1
@@ -1102,10 +1182,10 @@ theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (AbsArchimedea
       refine (or_iff_left ?_).mp hb
       simpa using h1.right
 
-    rw [← AbsArchimedeanClass.out_eq a, ← AbsArchimedeanClass.out_eq b]
-    rw [← AbsArchimedeanClass.orderHom_comm_mk, ← AbsArchimedeanClass.orderHom_comm_mk]
+    rw [← ArchimedeanClass.out_eq a, ← ArchimedeanClass.out_eq b]
+    rw [← ArchimedeanClass.orderHom_comm_mk, ← ArchimedeanClass.orderHom_comm_mk]
 
-    rw [AbsArchimedeanClass.eq_iff, AbsArchimedeanClass.eq_iff]
+    rw [ArchimedeanClass.eq_iff, ArchimedeanClass.eq_iff]
     intro h
     obtain ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩ := h
     rw [OrderMonoidHom.map_mabs, OrderMonoidHom.map_mabs, ← map_pow] at hm hn
@@ -1114,14 +1194,36 @@ theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (AbsArchimedea
     set B := mabs b.out
     set An := A ^ n
     set Bm := B ^ m
-    set A' := Quotient.out ((orderMonoidHom s) A)
-    set B' := Quotient.out ((orderMonoidHom s) B)
-    set An' := Quotient.out ((orderMonoidHom s) An)
-    set Bm' := Quotient.out ((orderMonoidHom s) Bm)
+    set A' := ((orderMonoidHom s) A).out
+    set B' := ((orderMonoidHom s) B).out
+    set An' := ((orderMonoidHom s) An).out
+    set Bm' := ((orderMonoidHom s) Bm).out
+
+    have hApos : 1 ≤ A := one_le_mabs a.out
     have hBpos : 1 ≤ B := one_le_mabs b.out
-    have hAA : AbsArchimedeanClass.mk (A'⁻¹ * A) ∈ s.carrier := by sorry
     have hABmpos : 1 ≤ A'⁻¹ * Bm' := le_inv_mul_iff_le.mpr hm
-    have hBBm : AbsArchimedeanClass.mk (Bm⁻¹ * Bm') ∈ s.carrier := by sorry
+    have hBAnpos : 1 ≤ B'⁻¹ * An' := le_inv_mul_iff_le.mpr hn
+
+    have hAA : ArchimedeanClass.mk (A'⁻¹ * A) ∈ s.carrier := by
+      apply (ArchimedeanQuotient.eq_iff _ _ _).mp
+      unfold A'
+      unfold ArchimedeanQuotient.mk orderMonoidHom
+      simp
+    have hBB : ArchimedeanClass.mk (B'⁻¹ * B) ∈ s.carrier := by
+      apply (ArchimedeanQuotient.eq_iff _ _ _).mp
+      unfold B'
+      unfold ArchimedeanQuotient.mk orderMonoidHom
+      simp
+    have hAAn : ArchimedeanClass.mk (An⁻¹ * An') ∈ s.carrier := by
+      apply (ArchimedeanQuotient.eq_iff _ _ _).mp
+      unfold An'
+      unfold ArchimedeanQuotient.mk orderMonoidHom
+      simp
+    have hBBm : ArchimedeanClass.mk (Bm⁻¹ * Bm') ∈ s.carrier := by
+      apply (ArchimedeanQuotient.eq_iff _ _ _).mp
+      unfold Bm'
+      unfold ArchimedeanQuotient.mk orderMonoidHom
+      simp
 
     refine ⟨⟨m + 1, by simp, ?_⟩, ⟨n + 1, by simp, ?_⟩⟩
     · have : B ^ (m + 1) = Bm * B := by exact pow_succ B m
@@ -1133,28 +1235,53 @@ theorem ArchimedeanQuotient.classOrderHom_injective (s : UpperSet (AbsArchimedea
         obtain h := le_inv_mul_of_mul_le h
         rw [mul_inv, ← mul_assoc] at h
         simpa using h
-      have hpos: 1 ≤ A'⁻¹ * Bm' * B := one_le_mul hABmpos hBpos
-      have hpos' : AbsArchimedeanClass.mk (A'⁻¹ * Bm' * B) ∉ s.carrier := by
-        rw [← AbsArchimedeanClass.mk_mul_of_one_le hABmpos hBpos]
-        suffices AbsArchimedeanClass.mk B ∉ s.carrier by
+      have hpos : 1 ≤ A'⁻¹ * Bm' * B := one_le_mul hABmpos hBpos
+      have hpos' : ArchimedeanClass.mk (A'⁻¹ * Bm' * B) ∉ s.carrier := by
+        rw [← ArchimedeanClass.mk_mul_of_one_le hABmpos hBpos]
+        suffices ArchimedeanClass.mk B ∉ s.carrier by
           contrapose! this with h
           exact s.upper' (min_le_right _ _) h
         unfold B
-        rw [AbsArchimedeanClass.mk_mabs, AbsArchimedeanClass.out_eq]
+        rw [ArchimedeanClass.mk_mabs, ArchimedeanClass.out_eq]
         exact hb
       apply le_of_lt
-      apply AbsArchimedeanClass.lt_of_mk_lt_mk _ hpos
-      refine lt_of_lt_of_le ?_ (AbsArchimedeanClass.mk_mul _ _)
+      apply ArchimedeanClass.lt_of_mk_lt_mk _ hpos
+      refine lt_of_lt_of_le ?_ (ArchimedeanClass.mk_mul _ _)
       apply lt_min
       · contrapose! hpos' with h
         exact s.upper' h hAA
       · contrapose! hpos' with h
         exact s.upper' h hBBm
-    · sorry
+    · have : A ^ (n + 1) = An * A := by exact pow_succ A n
+      rw [this]
+      suffices (B'⁻¹ * B) * (An⁻¹ *An') ≤ B'⁻¹ * An' * A by
+        rw [mul_assoc B'⁻¹, mul_assoc B'⁻¹] at this
+        obtain h := le_of_mul_le_mul_left' this
+        rw [mul_comm B] at h
+        obtain h := le_inv_mul_of_mul_le h
+        rw [mul_inv, ← mul_assoc] at h
+        simpa using h
+      have hpos : 1 ≤ B'⁻¹ * An' * A := one_le_mul hBAnpos hApos
+      have hpos' : ArchimedeanClass.mk (B'⁻¹ * An' * A) ∉ s.carrier := by
+        rw [← ArchimedeanClass.mk_mul_of_one_le hBAnpos hApos]
+        suffices ArchimedeanClass.mk A ∉ s.carrier by
+          contrapose! this with h
+          exact s.upper' (min_le_right _ _) h
+        unfold A
+        rw [ArchimedeanClass.mk_mabs, ArchimedeanClass.out_eq]
+        exact ha
+      apply le_of_lt
+      apply ArchimedeanClass.lt_of_mk_lt_mk _ hpos
+      refine lt_of_lt_of_le ?_ (ArchimedeanClass.mk_mul _ _)
+      apply lt_min
+      · contrapose! hpos' with h
+        exact s.upper' h hBB
+      · contrapose! hpos' with h
+        exact s.upper' h hAAn
 
 noncomputable
-def ArchimedeanQuotient.classOrderIso (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
-    (s.carrierᶜ ∪ {1} : Set (AbsArchimedeanClass M)) ≃o (AbsArchimedeanClass (ArchimedeanQuotient s)) where
+def ArchimedeanQuotient.classOrderIso (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    (s.carrierᶜ ∪ {1} : Set (ArchimedeanClass M)) ≃o (ArchimedeanClass (ArchimedeanQuotient s)) where
   toFun := ArchimedeanQuotient.classOrderHom s
   invFun := Function.surjInv (ArchimedeanQuotient.classOrderHom_surjective s)
   left_inv := by
@@ -1173,19 +1300,19 @@ def ArchimedeanQuotient.classOrderIso (s : UpperSet (AbsArchimedeanClass M)) [No
     · intro h
       exact OrderHomClass.monotone _ h
 
-/-theorem ArchimedeanQuotient.same_class (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier]
+/-theorem ArchimedeanQuotient.same_class (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]
     (a b : ArchimedeanQuotient s) :
-    AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk b ↔ AbsArchimedeanClass.mk a.out = AbsArchimedeanClass.mk b.out := by
-  rw [AbsArchimedeanClass.eq_iff, AbsArchimedeanClass.eq_iff]
+    ArchimedeanClass.mk a = ArchimedeanClass.mk b ↔ ArchimedeanClass.mk a.out = ArchimedeanClass.mk b.out := by
+  rw [ArchimedeanClass.eq_iff, ArchimedeanClass.eq_iff]
   simp_rw [← mabs_pow]
   simp_rw [ArchimedeanQuotient.le_def]
   sorry
 
-theorem ArchimedeanQuotient.class_transfer (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier]
-    (a b : M) (hs : AbsArchimedeanClass.mk a ∉ s.carrier) :
-    AbsArchimedeanClass.mk (ArchimedeanQuotient.mk s a) = AbsArchimedeanClass.mk (ArchimedeanQuotient.mk s b) ↔
-    AbsArchimedeanClass.mk a = AbsArchimedeanClass.mk b := by
-  rw [AbsArchimedeanClass.eq_iff, AbsArchimedeanClass.eq_iff]
+theorem ArchimedeanQuotient.class_transfer (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]
+    (a b : M) (hs : ArchimedeanClass.mk a ∉ s.carrier) :
+    ArchimedeanClass.mk (ArchimedeanQuotient.mk s a) = ArchimedeanClass.mk (ArchimedeanQuotient.mk s b) ↔
+    ArchimedeanClass.mk a = ArchimedeanClass.mk b := by
+  rw [ArchimedeanClass.eq_iff, ArchimedeanClass.eq_iff]
   simp_rw [← mabs_pow, ← QuotientGroup.mk_pow]
   constructor
   · simp_rw [ArchimedeanQuotient.le_def]
@@ -1198,29 +1325,29 @@ theorem ArchimedeanQuotient.class_transfer (s : UpperSet (AbsArchimedeanClass M)
   · sorry
 
 noncomputable
-def ArchimedeanQuotient.class_map (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier]
-    (a : AbsArchimedeanClass (ArchimedeanQuotient s)) : (s.carrierᶜ ∪ {1} : Set (AbsArchimedeanClass M)) :=
-  ⟨if a = 1 then 1 else AbsArchimedeanClass.mk a.out.out, by
+def ArchimedeanQuotient.class_map (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]
+    (a : ArchimedeanClass (ArchimedeanQuotient s)) : (s.carrierᶜ ∪ {1} : Set (ArchimedeanClass M)) :=
+  ⟨if a = 1 then 1 else ArchimedeanClass.mk a.out.out, by
     by_cases ha : a = 1
     · simp [ha]
     · apply Set.mem_union_left
       simp only [ha, ↓reduceIte, Set.mem_compl_iff]
-      obtain ha := (AbsArchimedeanClass.out_eq_one _).not.mpr ha
+      obtain ha := (ArchimedeanClass.out_eq_one _).not.mpr ha
       rw [← QuotientGroup.out_eq' a.out] at ha
       obtain ha := (QuotientGroup.eq_one_iff _).not.mp ha
       unfold ArchimedeanSubgroup at ha
       simpa using ha
   ⟩
 
-theorem ArchimedeanQuotient.class_map_injective (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
+theorem ArchimedeanQuotient.class_map_injective (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
     Function.Surjective (ArchimedeanQuotient.class_map s) := by
   intro a
   obtain hmem|hmem := (Set.mem_union _ _ _).mp a.prop
-  · use AbsArchimedeanClass.mk (ArchimedeanQuotient.mk s a.val.out)
+  · use ArchimedeanClass.mk (ArchimedeanQuotient.mk s a.val.out)
     unfold class_map
-    have : ¬ AbsArchimedeanClass.mk (mk s a.val.out) = 1 := by
+    have : ¬ ArchimedeanClass.mk (mk s a.val.out) = 1 := by
       apply (ArchimedeanQuotient.class_one _ _).not.mpr
-      rw [AbsArchimedeanClass.out_eq]
+      rw [ArchimedeanClass.out_eq]
       simpa using hmem
     simp only [this, ↓reduceIte]
 
@@ -1232,38 +1359,55 @@ theorem ArchimedeanQuotient.class_map_injective (s : UpperSet (AbsArchimedeanCla
     simpa using hmem
 
 noncomputable
-def ArchimedeanQuotient.class_map_iso (s : UpperSet (AbsArchimedeanClass M)) [Nonempty s.carrier] :
-    AbsArchimedeanClass (ArchimedeanQuotient s) ≃o (s.carrierᶜ ∪ {1} : Set (AbsArchimedeanClass M)) where
+def ArchimedeanQuotient.class_map_iso (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    ArchimedeanClass (ArchimedeanQuotient s) ≃o (s.carrierᶜ ∪ {1} : Set (ArchimedeanClass M)) where
   toFun := ArchimedeanQuotient.class_map s
   invFun := sorry
   left_inv := sorry
   right_inv := sorry
   map_rel_iff' := sorry-/
 
-abbrev ArchimedeanLayer (s t : UpperSet (AbsArchimedeanClass M))
+noncomputable
+abbrev ArchimedeanLayer (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] :=
-  Subgroup.map (ArchimedeanQuotient.orderMonoidHom s).toMonoidHom (ArchimedeanSubgroup t)
+  Subgroup.map (ArchimedeanQuotient.orderMonoidHom t).toMonoidHom (ArchimedeanSubgroup s)
 
 noncomputable
-instance ArchimedeanLayer.instLinearOrder (s t : UpperSet (AbsArchimedeanClass M))
+instance ArchimedeanLayer.instLinearOrder (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] : LinearOrder (ArchimedeanLayer s t) := by infer_instance
 
-theorem ArchimedeanLayer.le_def (s t : UpperSet (AbsArchimedeanClass M))
+theorem ArchimedeanLayer.le_def (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] : ∀ (x y : ArchimedeanLayer s t), x ≤ y ↔ x.val.out ≤ y.val.out := by
   intro x y
   rfl
 
-instance ArchimedeanLayer.instIsOrderedMonoid (s t : UpperSet (AbsArchimedeanClass M))
+instance ArchimedeanLayer.instIsOrderedMonoid (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] : IsOrderedMonoid (ArchimedeanLayer s t) := by infer_instance
+
+
+noncomputable
+def ArchimedeanLayer.class_map (s t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (a : ArchimedeanClass (ArchimedeanLayer s t)) :
+    (s.carrier ∩ (t.carrierᶜ ∪ {1}) : Set (ArchimedeanClass M)) :=
+  ⟨ArchimedeanClass.mk a.out.val.out, sorry⟩
+/-
+def ArchimedeanLayer.class_orderIso (s t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] :
+    ArchimedeanClass (ArchimedeanLayer s t) ≃o (s.carrier \ t.carrier ∪ {1} : Set (ArchimedeanClass M)) := by sorry
+-/
+
+--def ArchimedeanLayer.orderIso
+--def ArchimedeanLayer.classOrderIsoFun (s t : UpperSet (ArchimedeanClass M))
+--    [Nonempty s.carrier] [Nonempty t.carrier] :
 
 /-
 noncomputable
-def ArchimedeanLayer.class_map (s t : UpperSet (AbsArchimedeanClass M))
-    [Nonempty s.carrier] [Nonempty t.carrier] (a : AbsArchimedeanClass (ArchimedeanLayer s t)) :
-    (s.carrier \ t.carrier ∪ {1} : Set (AbsArchimedeanClass M)) :=
-  ⟨AbsArchimedeanClass.mk a.val.out.val.out, sorry⟩
+def phi1 (t : UpperSet (ArchimedeanClass M))
+    [Nonempty t.carrier] :=
+    ArchimedeanClass.orderHom (ArchimedeanQuotient.orderMonoidHom t)
 
-def ArchimedeanLayer.class_orderIso (s t : UpperSet (AbsArchimedeanClass M))
-    [Nonempty s.carrier] [Nonempty t.carrier] :
-    AbsArchimedeanClass (ArchimedeanLayer s t) ≃o (s.carrier \ t.carrier ∪ {1} : Set (AbsArchimedeanClass M)) := by sorry
--/
+noncomputable
+def phi2 (s t : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] [Nonempty t.carrier]:
+    ArchimedeanClass (ArchimedeanSubgroup s) →o ArchimedeanClass (ArchimedeanQuotient (M := ArchimedeanSubgroup s) t) := by
+
+    sorry-/
