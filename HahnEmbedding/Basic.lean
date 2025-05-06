@@ -6,11 +6,26 @@ import Mathlib.Algebra.Order.Monoid.Submonoid
 import Mathlib.Order.Hom.Bounded
 import Mathlib.Order.UpperLower.Principal
 import Mathlib.SetTheory.Cardinal.Basic
+import Mathlib.Data.Real.Basic
+import Mathlib.Order.WellFoundedSet
+import Mathlib.Algebra.Order.CauSeq.Basic
+import Mathlib.GroupTheory.Divisible
 
 section Patch
 theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
   a ^ n ≤ a := by
   simpa using pow_le_pow_right_of_le_one' ha (Nat.one_le_iff_ne_zero.2 hn)
+
+
+theorem pow_le_pow_iff_left' {M : Type*} [Monoid M] [LinearOrder M] [h : MulLeftStrictMono M] [MulRightStrictMono M] {a b : M} {n : ℕ} (hn : n ≠ 0) :
+  a ^ n ≤ b ^ n ↔ a ≤ b := by
+  constructor
+  · apply le_of_pow_le_pow_left' hn
+  · intro h
+    have : MulLeftMono M := mulLeftMono_of_mulLeftStrictMono M
+    have : MulRightMono M := mulRightMono_of_mulRightStrictMono M
+    apply pow_le_pow_left' h
+
 end Patch
 
 variable {M : Type*}
@@ -1671,3 +1686,306 @@ def ArchimedeanAxis.Achimedean {s : ArchimedeanClass M} (hs : s ≠ 1) :
     rw [this]
     simp
   exact Finset.card_pair hs
+
+
+-------------------------------------------------------------------------------------------
+variable {M : Type*} [AddCommGroup M] [LinearOrder M] [IsOrderedAddMonoid M] [Archimedean M]
+
+/--/
+noncomputable
+def Archimedean.embedReal {one : M} (hone: 0 < one) : M →+o ℝ where
+  toFun (a : M) :=
+    let seq (k : ℕ) := ((existsUnique_zsmul_near_of_pos hone ((2 ^ k) • a)).choose / (2 ^ k) : ℚ)
+    let causeq : CauSeq ℚ abs := ⟨seq, sorry⟩
+    Real.ofCauchy (CauSeq.Completion.mk causeq)
+  map_zero' := sorry
+  map_add' := sorry
+  monotone' := sorry
+
+-/
+
+
+
+----------------------------------------------------------------------
+
+--  divisible completion
+
+
+structure PreDivCompletion (M : Type*) [CommMonoid M]  where
+  num : M
+  den : ℕ+
+
+def PreDivCompletion.mul {M : Type*} [CommMonoid M] (a b : PreDivCompletion M) : PreDivCompletion M where
+  num := a.num ^ (b.den : ℕ) * b.num ^ (a.den : ℕ)
+  den := a.den * b.den
+
+def PreDivCompletionEquiv (M : Type*) [CommMonoid M] (a b : PreDivCompletion M) : Prop :=
+  a.num ^ (b.den : ℕ) = b.num ^ (a.den : ℕ)
+
+theorem PreDivCompletion.equiv (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
+    Equivalence (PreDivCompletionEquiv M) where
+  refl := by
+    intro x
+    rfl
+  symm := by
+    intro x y h
+    exact h.symm
+  trans := by
+    intro x y z hxy hyz
+    unfold PreDivCompletionEquiv at hxy hyz ⊢
+    apply_fun (· ^ (z.den : ℕ)) at hxy
+    apply_fun (· ^ (x.den : ℕ)) at hyz
+    rw [← pow_mul, mul_comm, pow_mul] at hxy
+    rw [← pow_mul, ← pow_mul, mul_comm (z.den : ℕ), mul_comm (y.den : ℕ), pow_mul, pow_mul] at hyz
+    obtain hxz := hxy.trans hyz
+    exact (pow_left_inj (by simp)).mp hxz
+
+def PreDivCompletion.setoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Setoid (PreDivCompletion M) where
+  r := PreDivCompletionEquiv M
+  iseqv := PreDivCompletion.equiv M
+
+
+abbrev DivCompletion (M : Type*) [CommMonoid M] [IsMulTorsionFree M] := Quotient (PreDivCompletion.setoid M)
+
+abbrev DivCompletion.mk {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (num : M) (den : ℕ+) :
+    DivCompletion M :=
+  ⟦⟨num, den⟩⟧
+
+theorem DivCompletion.eq_iff {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
+    DivCompletion.mk n1 d1 = DivCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) = n2 ^ (d1 : ℕ) := by
+  rw [Quotient.eq_iff_equiv]
+  rfl
+
+theorem DivCompletion.out_eq {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (a : DivCompletion M) :
+    DivCompletion.mk (a.out.num) (a.out.den) = a := by apply Quotient.out_eq
+
+instance DivCompletion.instMul (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Mul (DivCompletion M) where
+  mul := Quotient.lift₂  (fun a b ↦ ⟦a.mul b⟧) (by
+    intro a b a' b' ha hb
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp only [PNat.mul_coe]
+    rw [mul_pow, ← pow_mul, ← pow_mul, ← mul_assoc, ← mul_assoc,
+      mul_comm (b.den : ℕ) (a'.den : ℕ), mul_right_comm (a.den : ℕ) (a'.den : ℕ),
+      mul_comm (a.den : ℕ) (b'.den : ℕ),
+      mul_assoc, mul_assoc,
+      pow_mul a.num, pow_mul b.num]
+    rw [ha, hb]
+    rw [← pow_mul, ← pow_mul]
+    rw [mul_pow, ← pow_mul, ← pow_mul]
+    congr 2
+    · ring -- hack
+    · ring -- hack
+  )
+
+theorem DivCompletion.mul_def {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
+    DivCompletion.mk n1 d1 * DivCompletion.mk n2 d2 =
+    DivCompletion.mk (n1 ^ (d2 : ℕ) * n2 ^ (d1 : ℕ)) (d1 * d2) := by
+  rfl
+
+instance DivCompletion.instOne (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : One (DivCompletion M) where
+  one := DivCompletion.mk 1 1
+
+theorem DivCompletion.one_def (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
+    (1 : DivCompletion M) = DivCompletion.mk 1 1 := by rfl
+
+noncomputable
+instance DivCompletion.instCommMonoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : CommMonoid (DivCompletion M) where
+  mul_assoc := by
+    intro a b c
+    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b, ← DivCompletion.out_eq c]
+    set A := a.out
+    set B := b.out
+    set C := c.out
+    rw [DivCompletion.mul_def]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    unfold PreDivCompletion.mul
+    simp only [PNat.mul_coe]
+    rw [mul_pow, mul_pow, mul_pow, mul_pow, mul_pow, mul_pow]
+    rw [← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul,
+      ← pow_mul]
+    rw [← mul_assoc (A.num ^ _) (B.num ^ _)]
+    congr 2
+    · congr 1
+      ring -- hack
+    · congr 1
+      ring -- hack
+    · ring -- hack
+  one_mul := by
+    intro a
+    rw [← DivCompletion.out_eq a]
+    set A := a.out
+    rw [DivCompletion.one_def]
+    rw [DivCompletion.mul_def]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp
+  mul_one := by
+    intro a
+    rw [← DivCompletion.out_eq a]
+    set A := a.out
+    rw [DivCompletion.one_def]
+    rw [DivCompletion.mul_def]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp
+  mul_comm := by
+    intro a b
+    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b]
+    set A := a.out
+    set B := b.out
+    rw [DivCompletion.mul_def]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp only [PNat.mul_coe]
+    nth_rw 1 [mul_comm]
+    nth_rw 2 [mul_comm]
+  npow (n : ℕ) (a : DivCompletion M) := ⟦⟨a.out.num ^ n, a.out.den⟩⟧
+  npow_zero := by
+    intro a
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp
+  npow_succ := by
+    intro n a
+    rw [← DivCompletion.out_eq a]
+    set A := a.out
+    rw [DivCompletion.mul_def]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    have : A.num ^ ((DivCompletion.mk A.num A.den).out.den : ℕ) = (DivCompletion.mk A.num A.den).out.num ^ (A.den : ℕ) := by
+      obtain h := Quotient.mk_out (s := PreDivCompletion.setoid M) A
+      exact h.symm
+    rw [this]
+    simp only [PNat.mul_coe]
+    rw [← mul_pow, ← mul_comm, pow_mul, pow_succ]
+
+theorem npow_eq {M : Type*} [CommMonoid M] [IsMulTorsionFree M]
+    (num : M) (den : ℕ+) (n : ℕ):
+    (( DivCompletion.mk num den) ^ n )
+    = ( DivCompletion.mk (num ^ n) den ) := by
+
+  apply (DivCompletion.eq_iff _ _ _ _).mpr
+  rw [← pow_mul, mul_comm, pow_mul]
+  rw [← pow_mul _ n _, mul_comm, pow_mul]
+  congr 1
+  exact Quotient.mk_out (s := PreDivCompletion.setoid M) ({ num := num, den := den })
+
+noncomputable
+instance DivCompletion.instCommGroup (M : Type*) [CommGroup M] [IsMulTorsionFree M] : CommGroup (DivCompletion M) := {
+  (DivCompletion.instCommMonoid M : CommMonoid (DivCompletion M)) with
+  inv := fun a ↦ ⟦⟨a.out.num⁻¹, a.out.den⟩⟧
+  inv_mul_cancel := by
+    intro a
+    rw [← DivCompletion.out_eq a]
+    set A := a.out
+    rw [DivCompletion.mul_def]
+    simp only [inv_pow]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp only [PNat.val_ofNat, pow_one, PNat.mul_coe, one_pow]
+    apply inv_mul_eq_one.mpr
+    obtain h := Quotient.mk_out (s := PreDivCompletion.setoid M) A
+    exact h
+}
+
+noncomputable
+instance DivCompletion.instRootableBy (M : Type*) [CommGroup M] [IsMulTorsionFree M] :
+    RootableBy (DivCompletion M) ℕ where
+  root (a : DivCompletion M) (n : ℕ) :=
+    if h : n = 0 then
+      1
+    else
+      ⟦⟨a.out.num, a.out.den * ⟨n, (Nat.zero_lt_of_ne_zero h)⟩⟩⟧
+  root_zero := by
+    intro a
+    simp
+  root_cancel := by
+    intro n a h
+    rw [← DivCompletion.out_eq a]
+    set A := a.out
+    simp [h]
+    rw [npow_eq]
+    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    simp only [PNat.mul_coe, PNat.mk_coe]
+    rw [← pow_mul, mul_comm, pow_mul, pow_mul]
+    congr 1
+    unfold A
+    rw [DivCompletion.out_eq]
+
+instance DivCompletion.instLE (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LE M]:
+    LE (DivCompletion M) where
+  le (a b : DivCompletion M) := a.out.num ^ (b.out.den : ℕ) ≤ b.out.num ^ (a.out.den : ℕ)
+
+theorem DivCompletion.le_def {M} [CommGroup M] [IsMulTorsionFree M] [LE M] (a b : DivCompletion M):
+    a ≤ b ↔ a.out.num ^ (b.out.den : ℕ) ≤ b.out.num ^ (a.out.den : ℕ) := by rfl
+
+theorem DivCompletion.le_iff {M} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] (n1 n2 : M) (d1 d2 : ℕ+):
+    DivCompletion.mk n1 d1 ≤ DivCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) ≤ n2 ^ (d1 : ℕ) := by
+  rw [DivCompletion.le_def]
+  set n1' := (Quotient.out (mk n1 d1)).num
+  set d1' := (Quotient.out (mk n1 d1)).den
+  set n2' := (Quotient.out (mk n2 d2)).num
+  set d2' := (Quotient.out (mk n2 d2)).den
+  rw [← pow_le_pow_iff_left' (by simp : (d1 * d2 : ℕ) ≠ 0) ]
+  nth_rw 2 [← pow_le_pow_iff_left' (by simp : (d1' * d2' : ℕ) ≠ 0) ]
+  rw [← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul]
+  rw [(by ring : (d2' * (d1 * d2) : ℕ) = (d1 * (d2 * d2') : ℕ))]
+  rw [(by ring : (d1' * (d1 * d2) : ℕ) = (d2 * (d1 * d1') : ℕ))]
+  rw [(by ring : (d2 * (d1' * d2') : ℕ) = (d1' * (d2 * d2') : ℕ))]
+  rw [(by ring : (d1 * (d1' * d2') : ℕ) = (d2' * (d1 * d1') : ℕ))]
+  rw [pow_mul n1', pow_mul n2', pow_mul n1, pow_mul n2]
+  have h1 : n1' ^ (d1 : ℕ) = n1 ^ (d1' : ℕ) := by
+    apply (DivCompletion.eq_iff _ _ _ _).mp
+    unfold n1' d1'
+    apply DivCompletion.out_eq
+  have h2 : n2' ^ (d2 : ℕ) = n2 ^ (d2' : ℕ) := by
+    apply (DivCompletion.eq_iff _ _ _ _).mp
+    unfold n2' d2'
+    apply DivCompletion.out_eq
+  rw [h1, h2]
+
+noncomputable
+instance DivCompletion.instLinearOrder (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
+    LinearOrder (DivCompletion M) where
+  lt (a b : DivCompletion M) := a ≤ b ∧ ¬ b ≤ a
+  le_refl (a : DivCompletion M) := by rw [DivCompletion.le_def]
+  le_trans (a b c : DivCompletion M) := by
+    rw [DivCompletion.le_def, DivCompletion.le_def, DivCompletion.le_def]
+    intro hab hbc
+    obtain hab' := pow_le_pow_left' hab c.out.den
+    obtain hbc' := pow_le_pow_left' hbc a.out.den
+    rw [← pow_mul, ← pow_mul] at hab'
+    nth_rw 1 [mul_comm] at hab'
+    nth_rw 2 [mul_comm] at hab'
+    rw [pow_mul, pow_mul] at hab'
+    nth_rw 2 [← pow_mul] at hbc'
+    rw [mul_comm, pow_mul] at hbc'
+    obtain hac := hab'.trans hbc'
+    exact le_of_pow_le_pow_left' (by simp) hac
+  lt_iff_le_not_le (a b : DivCompletion M) := by rfl
+  le_antisymm (a b : DivCompletion M) := by
+    rw [DivCompletion.le_def, DivCompletion.le_def]
+    intro hab hba
+    obtain heq := le_antisymm hab hba
+    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b]
+    exact (DivCompletion.eq_iff _ _ _ _).mpr heq
+  le_total (a b : DivCompletion M) := by
+    rw [DivCompletion.le_def, DivCompletion.le_def]
+    exact le_total (a.out.num ^ (b.out.den : ℕ)) (b.out.num ^ (a.out.den : ℕ))
+  toDecidableLE := by exact Classical.decRel LE.le
+
+noncomputable
+instance DivCompletion.instIsOrderedMonoid (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
+    IsOrderedMonoid (DivCompletion M) where
+  mul_le_mul_left (a b : DivCompletion M) := by
+    rw [DivCompletion.le_def]
+    intro hab c
+    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b,  ← DivCompletion.out_eq c]
+    set A := a.out
+    set B := b.out
+    set C := c.out
+    rw [DivCompletion.mul_def, DivCompletion.mul_def]
+    rw [DivCompletion.le_iff]
+    simp only [PNat.mul_coe]
+    rw [mul_pow, mul_pow, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul]
+    apply mul_le_mul'
+    · rw [mul_comm (C.den : ℕ) (A.den : ℕ), ← mul_assoc, ← mul_assoc, mul_right_comm,
+        mul_comm (A.den : ℕ) (B.den : ℕ)]
+    · rw [mul_comm (C.den : ℕ) (A.den : ℕ), mul_comm (C.den : ℕ) (B.den : ℕ),
+        ← mul_assoc, ← mul_assoc, mul_comm (C.den : ℕ) (A.den : ℕ), mul_comm (C.den : ℕ) (B.den : ℕ),
+        mul_assoc, mul_assoc, pow_mul A.num, pow_mul B.num]
+      apply pow_le_pow_left' hab
