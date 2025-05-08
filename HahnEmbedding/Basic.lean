@@ -10,6 +10,7 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Order.WellFoundedSet
 import Mathlib.Algebra.Order.CauSeq.Basic
 import Mathlib.GroupTheory.Divisible
+import Mathlib.LinearAlgebra.Basis.VectorSpace
 
 section Patch
 theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
@@ -929,7 +930,7 @@ theorem ArchimedeanClass.orderHom_one {F : Type*} [FunLike F M N] [OrderHomClass
   rw [ArchimedeanClass.one_def]
 
 theorem ArchimedeanClass.orderHom_surjective {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
-    (f : F) (h : Function.Surjective f) : Function.Surjective (ArchimedeanClass.orderHom f) := by
+    {f : F} (h : Function.Surjective f) : Function.Surjective (ArchimedeanClass.orderHom f) := by
   intro a
   obtain ⟨b, hb⟩ := h a.out
   use ArchimedeanClass.mk b
@@ -937,7 +938,7 @@ theorem ArchimedeanClass.orderHom_surjective {F : Type*} [FunLike F M N] [OrderH
   rw [ArchimedeanClass.out_eq]
 
 theorem ArchimedeanClass.orderHom_injective {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
-    (f : F) (h : Function.Injective f) : Function.Injective (ArchimedeanClass.orderHom f) := by
+    {f : F} (h : Function.Injective f) : Function.Injective (ArchimedeanClass.orderHom f) := by
   intro a b
   nth_rw 2 [← ArchimedeanClass.out_eq a]
   nth_rw 2 [← ArchimedeanClass.out_eq b]
@@ -963,7 +964,7 @@ noncomputable
 def ArchimedeanClass.orderEmbedding {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
     (f : F) (h : Function.Injective f) : ArchimedeanClass M ↪o ArchimedeanClass N where
   toFun := ArchimedeanClass.orderHom f
-  inj' := ArchimedeanClass.orderHom_injective f h
+  inj' := ArchimedeanClass.orderHom_injective h
   map_rel_iff' := by
     intro a b
     simp only [Function.Embedding.coeFn_mk]
@@ -973,7 +974,7 @@ def ArchimedeanClass.orderEmbedding {F : Type*} [FunLike F M N] [OrderHomClass F
       apply lt_of_le_of_ne
       · exact (ArchimedeanClass.orderHom f).monotone h'.le
       · contrapose! h'
-        exact ((ArchimedeanClass.orderHom_injective f h) h').symm.le
+        exact ((ArchimedeanClass.orderHom_injective h) h').symm.le
     · intro h'
       exact (ArchimedeanClass.orderHom f).monotone h'
 
@@ -1353,8 +1354,7 @@ theorem ArchimedeanQuotient.classOrderPreIso_surjective (s : UpperSet (Archimede
     rw [ha]
     rw [ArchimedeanClass.orderHom_one]
   · right
-    obtain ⟨b, h⟩ := ArchimedeanClass.orderHom_surjective (ArchimedeanQuotient.orderMonoidHom s)
-      (ArchimedeanQuotient.surjective_OrderMonoidHom s) a
+    obtain ⟨b, h⟩ := ArchimedeanClass.orderHom_surjective (ArchimedeanQuotient.surjective_OrderMonoidHom s) a
     use b
     constructor
     · contrapose! ha
@@ -1491,7 +1491,7 @@ theorem ArchimedeanLayer.subgroupClassHom_surjective (s t : UpperSet (Archimedea
     (hst : t.carrier ⊆ s.carrier)
     [Nonempty s.carrier] [Nonempty t.carrier] :
     Function.Surjective (ArchimedeanLayer.subgroupClassHom s t) := by
-  exact ArchimedeanClass.orderHom_surjective _ (ArchimedeanLayer.subgroupHom_surjective _ _ hst)
+  exact ArchimedeanClass.orderHom_surjective (ArchimedeanLayer.subgroupHom_surjective _ _ hst)
 
 theorem ArchimedeanLayer.subgroupClassHom_semiInjective (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier]
@@ -1711,19 +1711,19 @@ def Archimedean.embedReal {one : M} (hone: 0 < one) : M →+o ℝ where
 --  divisible completion
 
 
-structure PreDivCompletion (M : Type*) [CommMonoid M]  where
+structure PreRootCompletion (M : Type*) [CommMonoid M]  where
   num : M
   den : ℕ+
 
-def PreDivCompletion.mul {M : Type*} [CommMonoid M] (a b : PreDivCompletion M) : PreDivCompletion M where
+def PreRootCompletion.mul {M : Type*} [CommMonoid M] (a b : PreRootCompletion M) : PreRootCompletion M where
   num := a.num ^ (b.den : ℕ) * b.num ^ (a.den : ℕ)
   den := a.den * b.den
 
-def PreDivCompletionEquiv (M : Type*) [CommMonoid M] (a b : PreDivCompletion M) : Prop :=
+def PreRootCompletionEquiv (M : Type*) [CommMonoid M] (a b : PreRootCompletion M) : Prop :=
   a.num ^ (b.den : ℕ) = b.num ^ (a.den : ℕ)
 
-theorem PreDivCompletion.equiv (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
-    Equivalence (PreDivCompletionEquiv M) where
+theorem PreRootCompletion.equiv (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
+    Equivalence (PreRootCompletionEquiv M) where
   refl := by
     intro x
     rfl
@@ -1732,7 +1732,7 @@ theorem PreDivCompletion.equiv (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
     exact h.symm
   trans := by
     intro x y z hxy hyz
-    unfold PreDivCompletionEquiv at hxy hyz ⊢
+    unfold PreRootCompletionEquiv at hxy hyz ⊢
     apply_fun (· ^ (z.den : ℕ)) at hxy
     apply_fun (· ^ (x.den : ℕ)) at hyz
     rw [← pow_mul, mul_comm, pow_mul] at hxy
@@ -1740,29 +1740,29 @@ theorem PreDivCompletion.equiv (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
     obtain hxz := hxy.trans hyz
     exact (pow_left_inj (by simp)).mp hxz
 
-def PreDivCompletion.setoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Setoid (PreDivCompletion M) where
-  r := PreDivCompletionEquiv M
-  iseqv := PreDivCompletion.equiv M
+def PreRootCompletion.setoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Setoid (PreRootCompletion M) where
+  r := PreRootCompletionEquiv M
+  iseqv := PreRootCompletion.equiv M
 
 
-abbrev DivCompletion (M : Type*) [CommMonoid M] [IsMulTorsionFree M] := Quotient (PreDivCompletion.setoid M)
+abbrev RootCompletion (M : Type*) [CommMonoid M] [IsMulTorsionFree M] := Quotient (PreRootCompletion.setoid M)
 
-abbrev DivCompletion.mk {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (num : M) (den : ℕ+) :
-    DivCompletion M :=
+abbrev RootCompletion.mk {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (num : M) (den : ℕ+) :
+    RootCompletion M :=
   ⟦⟨num, den⟩⟧
 
-theorem DivCompletion.eq_iff {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
-    DivCompletion.mk n1 d1 = DivCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) = n2 ^ (d1 : ℕ) := by
+theorem RootCompletion.eq_iff {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
+    RootCompletion.mk n1 d1 = RootCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) = n2 ^ (d1 : ℕ) := by
   rw [Quotient.eq_iff_equiv]
   rfl
 
-theorem DivCompletion.out_eq {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (a : DivCompletion M) :
-    DivCompletion.mk (a.out.num) (a.out.den) = a := by apply Quotient.out_eq
+theorem RootCompletion.out_eq {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (a : RootCompletion M) :
+    RootCompletion.mk (a.out.num) (a.out.den) = a := by apply Quotient.out_eq
 
-instance DivCompletion.instMul (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Mul (DivCompletion M) where
+instance RootCompletion.instMul (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : Mul (RootCompletion M) where
   mul := Quotient.lift₂  (fun a b ↦ ⟦a.mul b⟧) (by
     intro a b a' b' ha hb
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp only [PNat.mul_coe]
     rw [mul_pow, ← pow_mul, ← pow_mul, ← mul_assoc, ← mul_assoc,
       mul_comm (b.den : ℕ) (a'.den : ℕ), mul_right_comm (a.den : ℕ) (a'.den : ℕ),
@@ -1777,28 +1777,28 @@ instance DivCompletion.instMul (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
     · ring -- hack
   )
 
-theorem DivCompletion.mul_def {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
-    DivCompletion.mk n1 d1 * DivCompletion.mk n2 d2 =
-    DivCompletion.mk (n1 ^ (d2 : ℕ) * n2 ^ (d1 : ℕ)) (d1 * d2) := by
+theorem RootCompletion.mul_def {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n1 n2 : M) (d1 d2 : ℕ+) :
+    RootCompletion.mk n1 d1 * RootCompletion.mk n2 d2 =
+    RootCompletion.mk (n1 ^ (d2 : ℕ) * n2 ^ (d1 : ℕ)) (d1 * d2) := by
   rfl
 
-instance DivCompletion.instOne (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : One (DivCompletion M) where
-  one := DivCompletion.mk 1 1
+instance RootCompletion.instOne (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : One (RootCompletion M) where
+  one := RootCompletion.mk 1 1
 
-theorem DivCompletion.one_def (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
-    (1 : DivCompletion M) = DivCompletion.mk 1 1 := by rfl
+theorem RootCompletion.one_def (M : Type*) [CommMonoid M] [IsMulTorsionFree M] :
+    (1 : RootCompletion M) = RootCompletion.mk 1 1 := by rfl
 
 noncomputable
-instance DivCompletion.instCommMonoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : CommMonoid (DivCompletion M) where
+instance RootCompletion.instCommMonoid (M : Type*) [CommMonoid M] [IsMulTorsionFree M] : CommMonoid (RootCompletion M) where
   mul_assoc := by
     intro a b c
-    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b, ← DivCompletion.out_eq c]
+    rw [← RootCompletion.out_eq a, ← RootCompletion.out_eq b, ← RootCompletion.out_eq c]
     set A := a.out
     set B := b.out
     set C := c.out
-    rw [DivCompletion.mul_def]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
-    unfold PreDivCompletion.mul
+    rw [RootCompletion.mul_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
+    unfold PreRootCompletion.mul
     simp only [PNat.mul_coe]
     rw [mul_pow, mul_pow, mul_pow, mul_pow, mul_pow, mul_pow]
     rw [← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul,
@@ -1812,80 +1812,88 @@ instance DivCompletion.instCommMonoid (M : Type*) [CommMonoid M] [IsMulTorsionFr
     · ring -- hack
   one_mul := by
     intro a
-    rw [← DivCompletion.out_eq a]
+    rw [← RootCompletion.out_eq a]
     set A := a.out
-    rw [DivCompletion.one_def]
-    rw [DivCompletion.mul_def]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    rw [RootCompletion.one_def]
+    rw [RootCompletion.mul_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp
   mul_one := by
     intro a
-    rw [← DivCompletion.out_eq a]
+    rw [← RootCompletion.out_eq a]
     set A := a.out
-    rw [DivCompletion.one_def]
-    rw [DivCompletion.mul_def]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    rw [RootCompletion.one_def]
+    rw [RootCompletion.mul_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp
   mul_comm := by
     intro a b
-    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b]
+    rw [← RootCompletion.out_eq a, ← RootCompletion.out_eq b]
     set A := a.out
     set B := b.out
-    rw [DivCompletion.mul_def]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    rw [RootCompletion.mul_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp only [PNat.mul_coe]
     nth_rw 1 [mul_comm]
     nth_rw 2 [mul_comm]
-  npow (n : ℕ) (a : DivCompletion M) := ⟦⟨a.out.num ^ n, a.out.den⟩⟧
+  npow (n : ℕ) (a : RootCompletion M) := ⟦⟨a.out.num ^ n, a.out.den⟩⟧
   npow_zero := by
     intro a
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp
   npow_succ := by
     intro n a
-    rw [← DivCompletion.out_eq a]
+    rw [← RootCompletion.out_eq a]
     set A := a.out
-    rw [DivCompletion.mul_def]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
-    have : A.num ^ ((DivCompletion.mk A.num A.den).out.den : ℕ) = (DivCompletion.mk A.num A.den).out.num ^ (A.den : ℕ) := by
-      obtain h := Quotient.mk_out (s := PreDivCompletion.setoid M) A
+    rw [RootCompletion.mul_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
+    have : A.num ^ ((RootCompletion.mk A.num A.den).out.den : ℕ) = (RootCompletion.mk A.num A.den).out.num ^ (A.den : ℕ) := by
+      obtain h := Quotient.mk_out (s := PreRootCompletion.setoid M) A
       exact h.symm
     rw [this]
     simp only [PNat.mul_coe]
     rw [← mul_pow, ← mul_comm, pow_mul, pow_succ]
 
-theorem npow_eq {M : Type*} [CommMonoid M] [IsMulTorsionFree M]
-    (num : M) (den : ℕ+) (n : ℕ):
-    (( DivCompletion.mk num den) ^ n )
-    = ( DivCompletion.mk (num ^ n) den ) := by
-
-  apply (DivCompletion.eq_iff _ _ _ _).mpr
-  rw [← pow_mul, mul_comm, pow_mul]
-  rw [← pow_mul _ n _, mul_comm, pow_mul]
+theorem RootCompletion.pow_def {M : Type*} [CommMonoid M] [IsMulTorsionFree M] (n : M) (d: ℕ+) (m : ℕ) :
+    (RootCompletion.mk n d) ^ m=
+    (RootCompletion.mk (n ^ m) d) := by
+  apply (RootCompletion.eq_iff _ _ _ _).mpr
+  rw [← pow_mul, ← pow_mul, mul_comm m, mul_comm m, pow_mul, pow_mul]
   congr 1
-  exact Quotient.mk_out (s := PreDivCompletion.setoid M) ({ num := num, den := den })
+  apply (RootCompletion.eq_iff _ _ _ _).mp
+  rw [RootCompletion.out_eq]
 
 noncomputable
-instance DivCompletion.instCommGroup (M : Type*) [CommGroup M] [IsMulTorsionFree M] : CommGroup (DivCompletion M) := {
-  (DivCompletion.instCommMonoid M : CommMonoid (DivCompletion M)) with
+instance RootCompletion.instCommGroup (M : Type*) [CommGroup M] [IsMulTorsionFree M] : CommGroup (RootCompletion M) := {
+  (RootCompletion.instCommMonoid M : CommMonoid (RootCompletion M)) with
   inv := fun a ↦ ⟦⟨a.out.num⁻¹, a.out.den⟩⟧
   inv_mul_cancel := by
     intro a
-    rw [← DivCompletion.out_eq a]
+    rw [← RootCompletion.out_eq a]
     set A := a.out
-    rw [DivCompletion.mul_def]
+    rw [RootCompletion.mul_def]
     simp only [inv_pow]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp only [PNat.val_ofNat, pow_one, PNat.mul_coe, one_pow]
     apply inv_mul_eq_one.mpr
-    obtain h := Quotient.mk_out (s := PreDivCompletion.setoid M) A
+    obtain h := Quotient.mk_out (s := PreRootCompletion.setoid M) A
     exact h
 }
 
+
+theorem RootCompletion.inv_def {M : Type*} [CommGroup M] [IsMulTorsionFree M] (n : M) (d: ℕ+) :
+    (RootCompletion.mk n d)⁻¹ = RootCompletion.mk n⁻¹ d := by
+  apply (RootCompletion.eq_iff _ _ _ _).mpr
+  rw [inv_pow, inv_pow]
+  congr 1
+  apply (RootCompletion.eq_iff _ _ _ _).mp
+  rw [RootCompletion.out_eq]
+
+
 noncomputable
-instance DivCompletion.instRootableBy (M : Type*) [CommGroup M] [IsMulTorsionFree M] :
-    RootableBy (DivCompletion M) ℕ where
-  root (a : DivCompletion M) (n : ℕ) :=
+instance RootCompletion.instRootableBy (M : Type*) [CommGroup M] [IsMulTorsionFree M] :
+    RootableBy (RootCompletion M) ℕ where
+  root (a : RootCompletion M) (n : ℕ) :=
     if h : n = 0 then
       1
     else
@@ -1895,27 +1903,27 @@ instance DivCompletion.instRootableBy (M : Type*) [CommGroup M] [IsMulTorsionFre
     simp
   root_cancel := by
     intro n a h
-    rw [← DivCompletion.out_eq a]
+    rw [← RootCompletion.out_eq a]
     set A := a.out
     simp [h]
-    rw [npow_eq]
-    apply (DivCompletion.eq_iff _ _ _ _).mpr
+    rw [RootCompletion.pow_def]
+    apply (RootCompletion.eq_iff _ _ _ _).mpr
     simp only [PNat.mul_coe, PNat.mk_coe]
     rw [← pow_mul, mul_comm, pow_mul, pow_mul]
     congr 1
     unfold A
-    rw [DivCompletion.out_eq]
+    rw [RootCompletion.out_eq]
 
-instance DivCompletion.instLE (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LE M]:
-    LE (DivCompletion M) where
-  le (a b : DivCompletion M) := a.out.num ^ (b.out.den : ℕ) ≤ b.out.num ^ (a.out.den : ℕ)
+instance RootCompletion.instLE (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LE M]:
+    LE (RootCompletion M) where
+  le (a b : RootCompletion M) := a.out.num ^ (b.out.den : ℕ) ≤ b.out.num ^ (a.out.den : ℕ)
 
-theorem DivCompletion.le_def {M} [CommGroup M] [IsMulTorsionFree M] [LE M] (a b : DivCompletion M):
+theorem RootCompletion.le_def {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LE M] (a b : RootCompletion M):
     a ≤ b ↔ a.out.num ^ (b.out.den : ℕ) ≤ b.out.num ^ (a.out.den : ℕ) := by rfl
 
-theorem DivCompletion.le_iff {M} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] (n1 n2 : M) (d1 d2 : ℕ+):
-    DivCompletion.mk n1 d1 ≤ DivCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) ≤ n2 ^ (d1 : ℕ) := by
-  rw [DivCompletion.le_def]
+theorem RootCompletion.le_iff {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] (n1 n2 : M) (d1 d2 : ℕ+):
+    RootCompletion.mk n1 d1 ≤ RootCompletion.mk n2 d2 ↔ n1 ^ (d2 : ℕ) ≤ n2 ^ (d1 : ℕ) := by
+  rw [RootCompletion.le_def]
   set n1' := (Quotient.out (mk n1 d1)).num
   set d1' := (Quotient.out (mk n1 d1)).den
   set n2' := (Quotient.out (mk n2 d2)).num
@@ -1929,22 +1937,28 @@ theorem DivCompletion.le_iff {M} [CommGroup M] [IsMulTorsionFree M] [LinearOrder
   rw [(by ring : (d1 * (d1' * d2') : ℕ) = (d2' * (d1 * d1') : ℕ))]
   rw [pow_mul n1', pow_mul n2', pow_mul n1, pow_mul n2]
   have h1 : n1' ^ (d1 : ℕ) = n1 ^ (d1' : ℕ) := by
-    apply (DivCompletion.eq_iff _ _ _ _).mp
+    apply (RootCompletion.eq_iff _ _ _ _).mp
     unfold n1' d1'
-    apply DivCompletion.out_eq
+    apply RootCompletion.out_eq
   have h2 : n2' ^ (d2 : ℕ) = n2 ^ (d2' : ℕ) := by
-    apply (DivCompletion.eq_iff _ _ _ _).mp
+    apply (RootCompletion.eq_iff _ _ _ _).mp
     unfold n2' d2'
-    apply DivCompletion.out_eq
+    apply RootCompletion.out_eq
   rw [h1, h2]
 
+theorem RootCompletion.le_iff_right {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]
+    (n1 n2 : M) (d : ℕ+):
+    RootCompletion.mk n1 d ≤ RootCompletion.mk n2 d ↔ n1 ≤ n2 := by
+  rw [RootCompletion.le_iff]
+  exact pow_le_pow_iff_left' (by simp)
+
 noncomputable
-instance DivCompletion.instLinearOrder (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
-    LinearOrder (DivCompletion M) where
-  lt (a b : DivCompletion M) := a ≤ b ∧ ¬ b ≤ a
-  le_refl (a : DivCompletion M) := by rw [DivCompletion.le_def]
-  le_trans (a b c : DivCompletion M) := by
-    rw [DivCompletion.le_def, DivCompletion.le_def, DivCompletion.le_def]
+instance RootCompletion.instLinearOrder (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
+    LinearOrder (RootCompletion M) where
+  lt (a b : RootCompletion M) := a ≤ b ∧ ¬ b ≤ a
+  le_refl (a : RootCompletion M) := by rw [RootCompletion.le_def]
+  le_trans (a b c : RootCompletion M) := by
+    rw [RootCompletion.le_def, RootCompletion.le_def, RootCompletion.le_def]
     intro hab hbc
     obtain hab' := pow_le_pow_left' hab c.out.den
     obtain hbc' := pow_le_pow_left' hbc a.out.den
@@ -1956,30 +1970,40 @@ instance DivCompletion.instLinearOrder (M : Type*) [CommGroup M] [IsMulTorsionFr
     rw [mul_comm, pow_mul] at hbc'
     obtain hac := hab'.trans hbc'
     exact le_of_pow_le_pow_left' (by simp) hac
-  lt_iff_le_not_le (a b : DivCompletion M) := by rfl
-  le_antisymm (a b : DivCompletion M) := by
-    rw [DivCompletion.le_def, DivCompletion.le_def]
+  lt_iff_le_not_le (a b : RootCompletion M) := by rfl
+  le_antisymm (a b : RootCompletion M) := by
+    rw [RootCompletion.le_def, RootCompletion.le_def]
     intro hab hba
     obtain heq := le_antisymm hab hba
-    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b]
-    exact (DivCompletion.eq_iff _ _ _ _).mpr heq
-  le_total (a b : DivCompletion M) := by
-    rw [DivCompletion.le_def, DivCompletion.le_def]
+    rw [← RootCompletion.out_eq a, ← RootCompletion.out_eq b]
+    exact (RootCompletion.eq_iff _ _ _ _).mpr heq
+  le_total (a b : RootCompletion M) := by
+    rw [RootCompletion.le_def, RootCompletion.le_def]
     exact le_total (a.out.num ^ (b.out.den : ℕ)) (b.out.num ^ (a.out.den : ℕ))
   toDecidableLE := by exact Classical.decRel LE.le
 
+theorem RootCompletion.max_right {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]
+    (n1 n2 : M) (d : ℕ+):
+    max (RootCompletion.mk n1 d) (RootCompletion.mk n2 d) = RootCompletion.mk (max n1 n2) d := by
+  obtain h|h := le_total n1 n2
+  · simp only [h, sup_of_le_right, sup_eq_right]
+    apply (RootCompletion.le_iff_right _ _ _).mpr h
+  · simp only [h, sup_of_le_left, sup_eq_left]
+    apply (RootCompletion.le_iff_right _ _ _).mpr h
+
+
 noncomputable
-instance DivCompletion.instIsOrderedMonoid (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
-    IsOrderedMonoid (DivCompletion M) where
-  mul_le_mul_left (a b : DivCompletion M) := by
-    rw [DivCompletion.le_def]
+instance RootCompletion.instIsOrderedMonoid (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]:
+    IsOrderedMonoid (RootCompletion M) where
+  mul_le_mul_left (a b : RootCompletion M) := by
+    rw [RootCompletion.le_def]
     intro hab c
-    rw [← DivCompletion.out_eq a, ← DivCompletion.out_eq b,  ← DivCompletion.out_eq c]
+    rw [← RootCompletion.out_eq a, ← RootCompletion.out_eq b,  ← RootCompletion.out_eq c]
     set A := a.out
     set B := b.out
     set C := c.out
-    rw [DivCompletion.mul_def, DivCompletion.mul_def]
-    rw [DivCompletion.le_iff]
+    rw [RootCompletion.mul_def, RootCompletion.mul_def]
+    rw [RootCompletion.le_iff]
     simp only [PNat.mul_coe]
     rw [mul_pow, mul_pow, ← pow_mul, ← pow_mul, ← pow_mul, ← pow_mul]
     apply mul_le_mul'
@@ -1989,3 +2013,361 @@ instance DivCompletion.instIsOrderedMonoid (M : Type*) [CommGroup M] [IsMulTorsi
         ← mul_assoc, ← mul_assoc, mul_comm (C.den : ℕ) (A.den : ℕ), mul_comm (C.den : ℕ) (B.den : ℕ),
         mul_assoc, mul_assoc, pow_mul A.num, pow_mul B.num]
       apply pow_le_pow_left' hab
+
+theorem RootCompletion.mk_mabs {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M]
+    (n : M) (d : ℕ+) : |RootCompletion.mk n d|ₘ = RootCompletion.mk |n|ₘ d := by
+  unfold mabs
+  rw [RootCompletion.inv_def, RootCompletion.max_right]
+
+noncomputable
+def RootCompletion.orderMonoidHom (M : Type*) [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] :
+    M →*o RootCompletion M where
+  toFun := (RootCompletion.mk · 1)
+  map_one' := by rw [RootCompletion.one_def]
+  map_mul' (a b) := by
+    rw [RootCompletion.mul_def]
+    simp
+  monotone' := by
+    intro a b hab
+    rw [RootCompletion.le_iff]
+    simpa using hab
+
+theorem RootCompletion.orderMonoidHom_injective (M : Type*)
+    [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] :
+    Function.Injective (RootCompletion.orderMonoidHom M) := by
+  intro a b hab
+  obtain h := (RootCompletion.eq_iff _ _ _ _).mp hab
+  simpa using h
+
+noncomputable
+abbrev RootCompletion.classOrderHom (M : Type*)
+    [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] :
+    ArchimedeanClass M →o ArchimedeanClass (RootCompletion M) :=
+  ArchimedeanClass.orderHom (RootCompletion.orderMonoidHom M)
+
+theorem RootCompletion.classOrderHom_injective (M : Type*)
+    [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] :
+    Function.Injective (RootCompletion.classOrderHom M) :=
+  ArchimedeanClass.orderHom_injective (RootCompletion.orderMonoidHom_injective M)
+
+theorem RootCompletion.classOrderHom_surjective (M : Type*)
+    [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] :
+    Function.Surjective (RootCompletion.classOrderHom M) := by
+  intro a
+  use ArchimedeanClass.mk a.out.out.num
+  rw [← ArchimedeanClass.orderHom_comm_mk]
+  unfold orderMonoidHom
+  simp only [OrderMonoidHom.coe_mk, MonoidHom.coe_mk, OneHom.coe_mk]
+  nth_rw 2 [← ArchimedeanClass.out_eq a]
+  rw [ArchimedeanClass.eq_iff]
+  set A := a.out
+  refine ⟨⟨A.out.den, by simp, ?_⟩, ⟨1, by simp, ?_⟩⟩
+  · nth_rw 2 [← RootCompletion.out_eq A]
+    rw [RootCompletion.mk_mabs, RootCompletion.mk_mabs, RootCompletion.pow_def]
+    rw [RootCompletion.le_iff]
+    simp
+  · nth_rw 1 [← RootCompletion.out_eq A]
+    rw [RootCompletion.mk_mabs, RootCompletion.mk_mabs, RootCompletion.pow_def]
+    rw [RootCompletion.le_iff]
+    simp only [PNat.val_ofNat, pow_one]
+    apply le_self_pow (by simp) (by simp)
+
+
+
+-----------------------------------------------------------------
+
+noncomputable
+instance ArchimedeanQuotient.rootable {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] [RootableBy M ℕ]
+    (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    RootableBy (ArchimedeanQuotient s) ℕ := QuotientGroup.rootableBy _/-where
+  root (a : ArchimedeanQuotient s) (n : ℕ) := ArchimedeanQuotient.mk s (RootableBy.root a.out n)
+  root_zero := by
+    intro a
+    simp only [QuotientGroup.eq_one_iff]
+    rw [RootableBy.root_zero]
+    apply Subgroup.one_mem
+  root_cancel := by
+    intro n a h
+    have : ArchimedeanQuotient.mk s (RootableBy.root (a.out) n) ^ n =
+      (ArchimedeanQuotient.orderMonoidHom s).toMonoidHom (RootableBy.root (a.out) n) ^ n := by rfl
+    rw [this]
+    rw [← map_pow]
+    nth_rw 2 [← Quotient.out_eq a]
+    rw [RootableBy.root_cancel _ h]
+    rfl-/
+
+instance Additive.instSMul (A : Type*) (α : Type*) [h : Pow A α] : SMul α (Additive A) where
+  smul (n : α) (a : Additive A) := h.pow a n
+
+instance Additive.instDivisbleBy (A : Type*) (α : Type*) [Monoid A] [Pow A α] [Zero α] [h : RootableBy A α] :
+    DivisibleBy (Additive A) α where
+  div (a : Additive A) (n : α) := h.root a n
+  div_zero := h.root_zero
+  div_cancel := h.root_cancel
+
+instance DivisibleBy.div_one {M : Type*} [AddCommGroup M] [h : DivisibleBy M ℕ] (a : M) :
+    DivisibleBy.div a 1 = a := by
+  rw [← one_smul ℕ (DivisibleBy.div a 1)]
+  rw [DivisibleBy.div_cancel _ (by simp)]
+
+
+instance IsMulTorsionFree.IsAddTorsionFree {M : Type*} [Monoid M] [h : IsMulTorsionFree M] :
+    IsAddTorsionFree (Additive M) where
+  nsmul_right_injective := h.pow_left_injective
+
+instance DivisibleBy.zero_div {M : Type*} [AddCommGroup M] [h : DivisibleBy M ℕ] [IsAddTorsionFree M] (n : ℕ) :
+    DivisibleBy.div (0 : M) n = 0 := by
+  by_cases h : n = 0
+  · rw [h]
+    rw [DivisibleBy.div_zero]
+  · apply (nsmul_right_inj h).mp
+    rw [DivisibleBy.div_cancel _ h]
+    simp
+
+instance RootableBy.QSMul {M : Type*} [CommGroup M] [RootableBy M ℕ] : SMul ℚ (Additive M) where
+  smul (s : ℚ) (a : Additive M) := DivisibleBy.div (s.num • a) s.den
+
+theorem RootableBy.QSMul_def {M : Type*} [CommGroup M] [RootableBy M ℕ] (s : ℚ) (a : Additive M) :
+  s • a = DivisibleBy.div (s.num • a) s.den := rfl
+
+theorem Rat.mul_den' (q₁ q₂ : ℚ) :
+    q₁.den * q₂.den = (q₁ * q₂).den * ((q₁.num * q₂.num).natAbs.gcd (q₁.den * q₂.den)) := by
+  rw [Rat.mul_den]
+  symm
+  apply (Nat.dvd_iff_div_mul_eq _ _).mp
+  apply Nat.gcd_dvd_right
+
+theorem Rat.mul_num' (q₁ q₂ : ℚ) :
+    q₁.num * q₂.num = (q₁ * q₂).num * ((q₁.num * q₂.num).natAbs.gcd (q₁.den * q₂.den)) := by
+  rw [Rat.mul_num]
+  refine Eq.symm (Int.ediv_mul_cancel ?_)
+  rw [← Int.dvd_natAbs]
+  refine Int.ofNat_dvd.mpr ?_
+  apply Nat.gcd_dvd_left
+
+
+instance RootableBy.Qspace {M : Type*} [CommGroup M] [RootableBy M ℕ] [IsMulTorsionFree M] :
+    Module ℚ (Additive M) where
+  one_smul := by
+    intro a
+    rw [RootableBy.QSMul_def]
+    simp only [Rat.num_ofNat, one_smul, Rat.den_ofNat]
+    rw [DivisibleBy.div_one]
+  mul_smul := by
+    intro x y a
+    rw [RootableBy.QSMul_def, RootableBy.QSMul_def, RootableBy.QSMul_def]
+    apply (nsmul_right_inj (by simp : (x.den * y.den) ≠ 0)).mp
+    nth_rw 1 [Rat.mul_den']
+    rw [mul_comm (x * y).den, ← smul_smul, DivisibleBy.div_cancel _ (by simp)]
+    rw [mul_comm x.den, ← smul_smul, DivisibleBy.div_cancel _ (by simp),
+      smul_comm y.den x.num, DivisibleBy.div_cancel _ (by simp)]
+    have : (x.num * y.num).natAbs.gcd (y.den * x.den) • (x * y).num • a =
+      ((x.num * y.num).natAbs.gcd (y.den * x.den) : ℤ) • (x * y).num • a := by symm; apply natCast_zsmul
+    rw [this, smul_smul, smul_smul, mul_comm y.den, mul_comm _ (x * y).num]
+    congr 1
+    symm
+    apply Rat.mul_num'
+  smul_zero := by
+    intro a
+    rw [RootableBy.QSMul_def]
+    simp only [smul_zero]
+    rw [DivisibleBy.zero_div]
+  smul_add := by
+    intro a x y
+    rw [RootableBy.QSMul_def, RootableBy.QSMul_def, RootableBy.QSMul_def]
+    apply (nsmul_right_inj (by simp : a.den ≠ 0)).mp
+    rw [smul_add a.den]
+    rw [DivisibleBy.div_cancel _ (by simp), DivisibleBy.div_cancel _ (by simp), DivisibleBy.div_cancel _ (by simp)]
+    rw [smul_add]
+  add_smul := by
+    intro x y a
+    rw [RootableBy.QSMul_def, RootableBy.QSMul_def, RootableBy.QSMul_def]
+    apply (nsmul_right_inj (by simp : (x.den * y.den * (x + y).den) ≠ 0)).mp
+    rw [← smul_smul, DivisibleBy.div_cancel _ (by simp)]
+    rw [mul_comm (x.den * y.den), smul_add]
+    nth_rw 2 [mul_comm x.den y.den]
+    rw [← mul_assoc, ← mul_assoc, ← smul_smul ((x + y).den * y.den) x.den, ← smul_smul ((x + y).den * x.den) y.den]
+    rw [DivisibleBy.div_cancel _ (by simp), DivisibleBy.div_cancel _ (by simp)]
+    have : (x.den * y.den) • (x + y).num • a = ((x.den * y.den) : ℤ) • (x + y).num • a := by symm; apply natCast_zsmul
+    rw [this]
+    have : ((x + y).den * y.den) • x.num • a = ((x + y).den * y.den : ℤ) • x.num • a := by symm; apply natCast_zsmul
+    rw [this]
+    have : ((x + y).den * x.den) • y.num • a = ((x + y).den * x.den : ℤ) • y.num • a := by symm; apply natCast_zsmul
+    rw [this]
+    rw [smul_smul, smul_smul, smul_smul, ← add_smul]
+    congr 1
+    rw [mul_assoc ((x + y).den : ℤ), mul_assoc ((x + y).den : ℤ), ← mul_add]
+    rw [mul_comm _ (x + y).num, mul_comm ((x + y).den : ℤ), ← mul_assoc]
+    rw [mul_comm _ x.num, mul_comm _ y.num]
+    apply Rat.add_num_den'
+  zero_smul := by
+    intro a
+    rw [RootableBy.QSMul_def]
+    simp only [Rat.num_ofNat, zero_smul, Rat.den_ofNat]
+    rw [DivisibleBy.div_one]
+
+
+
+
+-------------------------------------------------------------------------------------------
+
+
+theorem LinearEquiv.map_neg {R : Type*} {S : Type*} {M : Type*} {M₂ : Type*}
+    [Semiring R] [Semiring S] [AddCommGroup M] [AddCommGroup M₂] {module_M : Module R M}
+    {module_M₂ : Module S M₂} {σ : R →+* S} {σ' : S →+* R}  [RingHomInvPair σ σ'] [RingHomInvPair σ' σ]  (f : M ≃ₛₗ[σ] M₂) (x : M) :
+  f (-x) = -f x := by
+  apply LinearMap.map_neg
+
+variable {M : Type*} [CommGroup M] [IsMulTorsionFree M] [LinearOrder M] [IsOrderedMonoid M] [RootableBy M ℕ]
+
+
+theorem DivisibleBy.hom_comm {M N : Type*} [AddCommGroup M] [AddCommGroup N] [DivisibleBy M ℕ] [DivisibleBy N ℕ]
+  [h : IsAddTorsionFree N]
+  {F : Type*} [FunLike F M N] [hhom : AddMonoidHomClass F M N] (f : F) (a : M) (n : ℕ) (h : n ≠ 0):
+     DivisibleBy.div (f a) n = f (DivisibleBy.div a n) := by
+  apply nsmul_right_injective h
+  simp only
+  rw [← map_nsmul]
+  rw [DivisibleBy.div_cancel _ h]
+  rw [DivisibleBy.div_cancel _ h]
+
+
+noncomputable
+def ArchimedeanQuotient.instLinearMap (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] :
+    Additive M →ₗ[ℚ] Additive (ArchimedeanQuotient s) where
+  toFun (a) := Additive.ofMul ((ArchimedeanQuotient.orderMonoidHom s) (Additive.toMul a))
+  map_add' := by
+    intro x y
+    simp
+  map_smul' := by
+    intro m x
+    rw [RootableBy.QSMul_def, RootableBy.QSMul_def]
+    simp only [eq_ratCast, Rat.cast_eq_id, id_eq]
+    have (a) : (orderMonoidHom s) a = (orderMonoidHom s).toMonoidHom a := by rfl
+    rw [this, this]
+    rw [← MonoidHom.toAdditive_apply_apply, ← MonoidHom.toAdditive_apply_apply]
+    rw [← DivisibleBy.hom_comm _ _ _ (by simp)]
+    rw [map_zsmul]
+
+
+noncomputable
+def ArchimedeanQuotient.representative
+    (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : ArchimedeanQuotient s) : M :=
+  let basis_exists := Basis.exists_basis ℚ (Additive (ArchimedeanQuotient s))
+  let basis := basis_exists.choose
+  let basis_spec := basis_exists.choose_spec.some
+  let repr := basis_spec.repr a
+  let basis_out (v : basis) := Additive.ofMul (Additive.toMul (basis_spec v)).out
+  Additive.toMul ((Finsupp.linearCombination ℚ basis_out) repr)
+
+def ArchimedeanComplement
+    (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] : Subgroup M where
+  carrier := Set.range (ArchimedeanQuotient.representative s)
+  mul_mem' := by
+    intro a b ha hb
+    simp only [Set.mem_range] at ha hb ⊢
+    obtain ⟨a', ha⟩ := ha
+    obtain ⟨b', hb⟩ := hb
+    use a' * b'
+    rw [← ha, ← hb]
+    unfold ArchimedeanQuotient.representative
+    simp only
+    rw [← toMul_add]
+    congr 1
+    rw [← LinearMap.map_add]
+    congr 1
+    rw [← LinearEquiv.map_add]
+    rfl
+  one_mem' := by
+    simp only [Set.mem_range]
+    use 1
+    unfold ArchimedeanQuotient.representative
+    simp only [toMul_eq_one]
+    convert LinearMap.map_zero _
+    simp only [EmbeddingLike.map_eq_zero_iff]
+    rfl
+  inv_mem' := by
+    intro a ha
+    simp only [Set.mem_range] at ha ⊢
+    obtain ⟨a', ha⟩ := ha
+    use a'⁻¹
+    rw [← ha]
+    unfold ArchimedeanQuotient.representative
+    simp only
+    rw [← toMul_neg]
+    rw [← LinearMap.map_neg]
+    congr 2
+    rw [← LinearEquiv.map_neg]
+    congr
+
+instance ArchimedeanComplement.instLinearOrder
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+  LinearOrder (ArchimedeanComplement s) := by infer_instance
+
+instance ArchimedeanComplement.instIsOrderedMonoid
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+  IsOrderedMonoid (ArchimedeanComplement s) := by infer_instance
+
+noncomputable
+instance ArchimedeanComplement.instMonoidHom
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    ArchimedeanQuotient s →* ArchimedeanComplement s where
+
+  toFun (a : ArchimedeanQuotient s) := ⟨ArchimedeanQuotient.representative s a, by
+    unfold ArchimedeanComplement
+    simp
+  ⟩
+  map_one' := by
+    unfold ArchimedeanQuotient.representative
+    simp only [Subgroup.mk_eq_one, toMul_eq_one]
+    convert LinearMap.map_zero _
+    simp only [EmbeddingLike.map_eq_zero_iff]
+    rfl
+  map_mul' := by
+    intro a b
+    unfold ArchimedeanQuotient.representative
+    simp only [MulMemClass.mk_mul_mk, Subtype.mk.injEq]
+    rw [← toMul_add]
+    congr 1
+    rw [← LinearMap.map_add]
+    congr 1
+    rw [← LinearEquiv.map_add]
+    rfl
+
+noncomputable
+instance ArchimedeanComplement.instOrderMonoidHom
+    (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier] :
+    ArchimedeanQuotient s →*o ArchimedeanComplement s := {
+  (ArchimedeanComplement.instMonoidHom s) with
+  monotone' := by
+    intro a b h
+    obtain heq|hlt := eq_or_lt_of_le h
+    · rw [heq]
+    · apply le_of_lt
+      suffices (ArchimedeanComplement.instMonoidHom s) a < (ArchimedeanComplement.instMonoidHom s) b by
+        exact this
+      suffices (ArchimedeanQuotient.orderMonoidHom s) ((ArchimedeanComplement.instMonoidHom s) a) <
+        (ArchimedeanQuotient.orderMonoidHom s) ((ArchimedeanComplement.instMonoidHom s) b) by
+        contrapose! this
+        apply (ArchimedeanQuotient.orderMonoidHom s).monotone'
+        simpa using this
+      have (x : ArchimedeanQuotient s) :
+        (ArchimedeanQuotient.orderMonoidHom s) ((ArchimedeanComplement.instMonoidHom s) x) = x := by
+
+        have : (ArchimedeanQuotient.orderMonoidHom s) ((ArchimedeanComplement.instMonoidHom s) x) =
+          (ArchimedeanQuotient.instLinearMap s) (Additive.ofMul ((ArchimedeanComplement.instMonoidHom s) x)) := by rfl
+        rw [this]
+
+        unfold ArchimedeanComplement.instMonoidHom ArchimedeanQuotient.representative
+        simp only [MonoidHom.coe_mk, OneHom.coe_mk, ofMul_toMul]
+        rw [LinearMap.map_finsupp_linearCombination]
+        convert Basis.linearCombination_repr _ x
+        ext v
+        unfold ArchimedeanQuotient.instLinearMap ArchimedeanQuotient.orderMonoidHom
+        simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply, LinearMap.coe_mk, AddHom.coe_mk,
+          Function.comp_apply, toMul_ofMul, Quotient.out_eq, ofMul_toMul]
+        rfl
+
+      rw [this, this]
+      exact hlt
+}
