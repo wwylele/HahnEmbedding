@@ -11,6 +11,7 @@ import Mathlib.Order.WellFoundedSet
 import Mathlib.Algebra.Order.CauSeq.Basic
 import Mathlib.GroupTheory.Divisible
 import Mathlib.LinearAlgebra.Basis.VectorSpace
+import Mathlib.Order.PiLex
 
 section Patch
 theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
@@ -1409,7 +1410,7 @@ def ArchimedeanQuotient.classOrderIso (s : UpperSet (ArchimedeanClass M)) [Nonem
       exact OrderHomClass.monotone _ h
 
 -------------------------------------------------------
-
+/-
 noncomputable
 abbrev ArchimedeanLayer (s t : UpperSet (ArchimedeanClass M))
     [Nonempty s.carrier] [Nonempty t.carrier] :=
@@ -1686,12 +1687,12 @@ def ArchimedeanAxis.Achimedean {s : ArchimedeanClass M} (hs : s ≠ 1) :
     rw [this]
     simp
   exact Finset.card_pair hs
-
+-/
 
 -------------------------------------------------------------------------------------------
 variable {M : Type*} [AddCommGroup M] [LinearOrder M] [IsOrderedAddMonoid M] [Archimedean M]
 
-/--/
+/-
 noncomputable
 def Archimedean.embedReal {one : M} (hone: 0 < one) : M →+o ℝ where
   toFun (a : M) :=
@@ -2661,3 +2662,189 @@ def ArchmedeanDecomp (s t : UpperSet (ArchimedeanClass M))
         exact hlt
       · obtain hlt := lt_of_le_of_ne' h1 heq
         exact (ArchimedeanComplement.fullOrderMonoidHom t).toOrderHom.monotone.reflect_lt hlt
+
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------
+
+noncomputable
+instance Pi.instPartialOrderLexForallOfWellFoundedSupport
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → LinearOrder (β a)]
+    (base : (a : ι) → (β a)):
+    PartialOrder { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ base i}.IsWF } := by infer_instance
+
+theorem isTrichotomous_lex_of_support
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → LinearOrder (β a)]
+    (base : (a : ι) → (β a)) :
+    IsTrichotomous { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ base i}.IsWF } (· < ·) :=
+  { trichotomous := fun a b => by
+      rcases eq_or_ne a b with hab | hab
+      · exact Or.inr (Or.inl hab)
+      · have hab := (Subtype.eq_iff.ne).mp hab
+        rw [Function.ne_iff] at hab
+        let u := {i : ι | a.val i ≠ base i} ∪ {i : ι | b.val i ≠ base i}
+        obtain h : u.IsWF := a.prop.union b.prop
+        let v := {i : ι | a.val i ≠ b.val i}
+        have hvu : v ⊆ u := by
+          unfold u v
+          intro i h
+          simp only [Set.mem_setOf_eq] at h
+          simp only [Set.mem_union, Set.mem_setOf_eq]
+          rw [@or_iff_not_imp_left]
+          intro h2
+          simp only [ne_eq, Decidable.not_not] at h2
+          rw [h2] at h
+          exact h.symm
+        have hv : v.IsWF := h.subset hvu
+        let i := hv.min hab
+        have hri : ∀ j, j < i → a.val j = b.val j := by
+          intro j
+          rw [← not_imp_not]
+          exact fun h' => hv.not_lt_min hab h'
+        have hne : a.val i ≠ b.val i := hv.min_mem hab
+        rcases lt_trichotomy (a.val i) (b.val i) with hi | hi
+        exacts [Or.inl ⟨i, hri, hi⟩,
+          Or.inr <| Or.inr <| ⟨i, fun j hj => (hri j hj).symm, hi.resolve_left hne⟩]
+  }
+
+noncomputable
+instance Pi.instLinearOrderLexForallOfWellFoundedSupport
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → LinearOrder (β a)]
+    (base : (a : ι) → (β a)) :
+    LinearOrder { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ base i}.IsWF } :=
+  @linearOrderOfSTO _ (· < ·)
+    { trichotomous := (isTrichotomous_lex_of_support base).1 } (Classical.decRel _)
+
+
+instance Pi.mulOfSupport
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → CommGroup (β a)]:
+    Mul { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF } where
+  mul (a b) := ⟨a.val * b.val, by
+    obtain h := a.prop.union b.prop
+    apply h.subset
+    intro x hx
+    contrapose! hx
+    simp only [ne_eq, Set.mem_union, Set.mem_setOf_eq, not_or, not_not] at hx
+    obtain ⟨hax, hbx⟩ := hx
+    simp only [ne_eq, Set.mem_setOf_eq, not_not]
+    rw [Pi.mul_apply]
+    rw [hax, hbx]
+    simp
+  ⟩
+
+theorem Pi.mulOfSupport_mul_def
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → CommGroup (β a)]
+    (a b c : { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF }) :
+    a * b = c ↔ a.val * b.val = c.val := by
+  rw [Subtype.eq_iff]
+  rfl
+
+
+
+
+instance Pi.groupOfSupport
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → CommGroup (β a)]:
+    Group { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF } where
+  mul_assoc (a b c) := by
+    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
+    simp only [Subtype.mk.injEq]
+    apply mul_assoc
+  one := ⟨ 1, by
+    convert Set.isWF_empty
+    apply Set.eq_empty_of_forall_not_mem
+    intro i
+    simp only [ne_eq, Set.mem_setOf_eq, not_not]
+    rw [Pi.one_apply]
+  ⟩
+  one_mul (a) := by
+    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
+    rw [Subtype.eq_iff]
+    simp only [mul_eq_right]
+    rfl
+  mul_one (a) := by
+    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
+    rw [Subtype.eq_iff]
+    simp only [mul_eq_left]
+    rfl
+  inv (a) := ⟨a.val⁻¹, by
+    convert a.prop using 1
+    ext i
+    simp only [ne_eq, Set.mem_setOf_eq]
+    rw [Iff.not]
+    rw [Pi.inv_apply]
+    exact inv_eq_one
+  ⟩
+  inv_mul_cancel (a) := by
+    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
+    simp only [ne_eq, inv_mul_cancel]
+    rfl
+
+
+--------------------------------------------------------------------------------------------
+
+
+def UpperSet.univ (α : Type*) [Preorder α] : UpperSet α where
+  carrier := Set.univ
+  upper' := by
+    intro a b h ha
+    simp
+
+instance ArchimedeanClassIciNonempty {s : ArchimedeanClass M} : Nonempty (UpperSet.Ici s).carrier := by
+  use 1
+  simpa using ArchimedeanClass.le_one s
+
+instance ArchimedeanClassIoiNonempty {s : ArchimedeanClass M} (hs : s ≠ 1) : Nonempty (UpperSet.Ioi s).carrier := by
+  use 1
+  simpa using lt_of_le_of_ne (ArchimedeanClass.le_one s) hs
+
+instance ArchimedeanClassUnivNonempty : Nonempty (UpperSet.univ (ArchimedeanClass M)).carrier := by
+  use 1
+  trivial
+
+noncomputable
+def ArchimedeanSlice {s : ArchimedeanClass M} (hs : s ≠ 1) :
+    have : Nonempty (UpperSet.Ioi s).carrier := ArchimedeanClassIoiNonempty hs
+    Subgroup (ArchimedeanComplement (UpperSet.Ioi s)) :=
+  have : Nonempty (UpperSet.Ioi s).carrier := ArchimedeanClassIoiNonempty hs
+  ArchimedeanWindow (UpperSet.Ici s) (UpperSet.Ioi s)
+
+
+
+noncomputable
+def ArchimedeanSlice.mk_sliced {s : ArchimedeanClass M} (hs : s ≠ 1) (a : M) : ArchimedeanSlice hs :=
+  let a' : ArchimedeanSubgroup (UpperSet.univ (ArchimedeanClass M)) := ⟨a, by trivial⟩
+  let outer := ((ArchmedeanDecomp (UpperSet.univ (ArchimedeanClass M)) (UpperSet.Ici s)
+    (by
+      intro a h
+      trivial
+    )) a').2
+
+  have : Nonempty (UpperSet.Ioi s).carrier := ArchimedeanClassIoiNonempty hs
+
+  ((ArchmedeanDecomp (UpperSet.Ici s) (UpperSet.Ioi s) (by
+    simpa using Set.Ioi_subset_Ici_self
+  )) outer).1
+
+
+
+noncomputable
+def ArchimedeanFullDecomp : M →*o
+  { f : Lex ((i : {s : ArchimedeanClass M // s ≠ 1}) → ArchimedeanSlice i.prop) //
+    {i : {s : ArchimedeanClass M // s ≠ 1} | f i ≠ 1}.IsWF } where
+  toFun (a) := ⟨fun s ↦ ArchimedeanSlice.mk_sliced s.prop a, by
+    sorry
+  ⟩
+  map_mul' (a b) := by
+    symm
+    apply (Pi.mulOfSupport_mul_def _ _ _).mpr
+    simp only
+    rw [Pi.mul_def]
+    refine ofLex_inj.mp ?_
+    ext x
+    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, Pi.ofLex_apply, Subgroup.coe_mul]
+    sorry
+  map_one' := sorry
+  monotone' := sorry
