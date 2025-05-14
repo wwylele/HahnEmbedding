@@ -12,6 +12,8 @@ import Mathlib.Algebra.Order.CauSeq.Basic
 import Mathlib.GroupTheory.Divisible
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.Order.PiLex
+import Mathlib.Order.UpperLower.Closure
+import Mathlib.GroupTheory.Complement
 
 section Patch
 theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
@@ -2250,15 +2252,18 @@ def ArchimedeanQuotient.instLinearMap (s : UpperSet (ArchimedeanClass M)) [hempt
     rw [← DivisibleBy.hom_comm _ _ _ (by simp)]
     rw [map_zsmul]
 
+noncomputable
+abbrev ArchimedeanQuotient.representative_basis_spec
+    (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier]  :=
+  let basis_exists := Basis.exists_basis ℚ (Additive (ArchimedeanQuotient s))
+  basis_exists.choose_spec.some
 
 noncomputable
 def ArchimedeanQuotient.representative
     (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] (a : ArchimedeanQuotient s) : M :=
-  let basis_exists := Basis.exists_basis ℚ (Additive (ArchimedeanQuotient s))
-  let basis := basis_exists.choose
-  let basis_spec := basis_exists.choose_spec.some
-  let repr := basis_spec.repr a
-  let basis_out (v : basis) := Additive.ofMul (Additive.toMul (basis_spec v)).out
+  let basis_spec := ArchimedeanQuotient.representative_basis_spec s
+  let repr := basis_spec.repr (Additive.ofMul a)
+  let basis_out (v) := Additive.ofMul (Additive.toMul (basis_spec v)).out
   Additive.toMul ((Finsupp.linearCombination ℚ basis_out) repr)
 
 theorem ArchimedeanQuotient.repr_roundtrip'
@@ -2316,6 +2321,85 @@ theorem ArchimedeanQuotient.repr_classUp
     apply s.upper ha
     rw [← ArchimedeanClass.mk_inv, inv_div]
     apply ArchimedeanQuotient.repr_roundtrip
+
+/-theorem ArchimedeanQuotient.repr_comm (s : UpperSet (ArchimedeanClass M)) (t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (a : M) :
+    ArchimedeanQuotient.representative s (ArchimedeanQuotient.mk s (ArchimedeanQuotient.representative t (ArchimedeanQuotient.mk t a))) =
+    ArchimedeanQuotient.representative t (ArchimedeanQuotient.mk t (ArchimedeanQuotient.representative s (ArchimedeanQuotient.mk s a))) := by
+
+
+  sorry-/
+
+/-theorem ArchimedeanQuotient.repr_anti (s : UpperSet (ArchimedeanClass M)) (t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (hst : s.carrier ⊆ t.carrier) (a : M):
+    ArchimedeanClass.mk (a / ArchimedeanQuotient.representative t (ArchimedeanQuotient.mk t a)) ≤
+    ArchimedeanClass.mk (a / ArchimedeanQuotient.representative s (ArchimedeanQuotient.mk s a)) := by
+
+  by_cases h : ArchimedeanClass.mk (a / ArchimedeanQuotient.representative t (ArchimedeanQuotient.mk t a)) ∈ s
+  · apply le_of_eq
+
+
+    congr 1
+    set a' := a / ArchimedeanQuotient.representative t (ArchimedeanQuotient.mk t a)
+    trans a' /
+      ArchimedeanQuotient.representative s (ArchimedeanQuotient.mk s a')
+    · apply eq_div_iff_mul_eq'.mpr
+      simp only [mul_eq_left]
+      unfold ArchimedeanQuotient.representative
+      simp only [toMul_eq_one]
+      convert LinearMap.map_zero _
+      simp only [EmbeddingLike.map_eq_zero_iff, ofMul_eq_zero, QuotientGroup.eq_one_iff]
+      unfold ArchimedeanSubgroup
+      simpa using h
+    · apply div_eq_one.mp
+      rw [div_div_div_comm]
+      apply div_eq_one.mpr
+      unfold ArchimedeanQuotient.representative
+      simp only
+      have (x y : Additive M) : Additive.toMul x / Additive.toMul y = Additive.toMul (x - y) := by
+        exact rfl
+      rw [this]
+      rw [← LinearMap.map_sub]
+
+      have (x) : (ArchimedeanQuotient.representative_basis_spec s).repr x =
+        (ArchimedeanQuotient.representative_basis_spec s).repr.toLinearMap x := by rfl
+      rw [this, this]
+      rw [← LinearMap.map_sub]
+      have (x y : ArchimedeanQuotient s) : Additive.ofMul x - Additive.ofMul y = Additive.ofMul (x / y) := by
+        rfl
+      rw [this]
+      rw [← QuotientGroup.mk_div]
+      unfold a'
+      simp only [div_div_cancel_left, QuotientGroup.mk_inv, ofMul_inv, LinearEquiv.coe_coe, map_neg,
+        toMul_neg, inv_inj]
+
+      show representative t (mk t a) = representative s (mk s (representative t (mk t a) ))
+
+      /-
+      Idea:
+        - if x is in range (representative s), then we have x = representative s (x) as round-trip
+          so we only need to show (representative t) is in rane in representative s
+        - This is equivalent to show (ArchimedeanComplement t) is a subgroup / subspace of (ArchimedeanComplement s)
+        -
+
+      -/
+
+      sorry
+      /-rw [ArchimedeanQuotient.repr_comm] --!
+      congr 1
+      apply (ArchimedeanQuotient.eq_iff _ _ _).mpr
+      refine Set.mem_of_mem_of_subset ?_ hst
+      rw [← ArchimedeanClass.mk_inv]
+      simp
+      convert ArchimedeanQuotient.repr_roundtrip s a using 2
+      rw [div_eq_mul_inv]
+      rw [mul_comm]-/
+
+
+  · contrapose! h
+    apply s.upper h.le
+    apply ArchimedeanQuotient.repr_roundtrip
+-/
 
 def ArchimedeanComplement
     (s : UpperSet (ArchimedeanClass M)) [hempty: Nonempty s.carrier] : Subgroup M where
@@ -2487,7 +2571,7 @@ def ArchimedeanComplement.fullOrderMonoidHom
 theorem ArchimedeanComplement.fullOrderMonoidHom_shortDist
     (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]
     (a : M) :
-    ArchimedeanClass.mk (a / ((ArchimedeanComplement.fullOrderMonoidHom s) a).val) ∈ s.carrier := by
+    ArchimedeanClass.mk (a / ((ArchimedeanComplement.fullOrderMonoidHom s) a).val) ∈ s := by
   unfold fullOrderMonoidHom instOrderMonoidHom instMonoidHom ArchimedeanQuotient.orderMonoidHom
   simp only [UpperSet.carrier_eq_coe, OrderMonoidHom.comp_apply, OrderMonoidHom.coe_mk,
     QuotientGroup.mk'_apply, MonoidHom.coe_mk, OneHom.coe_mk, SetLike.mem_coe]
@@ -2534,6 +2618,52 @@ theorem ArchimedeanComplement.claps (s : UpperSet (ArchimedeanClass M))
   simp only [EmbeddingLike.map_eq_zero_iff]
   rfl
 
+theorem ArchimedeanComplement.isComplement (s : UpperSet (ArchimedeanClass M)) [Nonempty s.carrier]:
+    Subgroup.IsComplement' (ArchimedeanComplement s) (ArchimedeanSubgroup s)  := by
+  rw [Subgroup.isComplement'_def, Subgroup.isComplement_iff_existsUnique]
+  intro a
+  use ⟨((ArchimedeanComplement.fullOrderMonoidHom s) a), ⟨
+    a / (ArchimedeanComplement.fullOrderMonoidHom s) a, by
+      apply ArchimedeanComplement.fullOrderMonoidHom_shortDist
+    ⟩  ⟩
+  constructor
+  · simp
+  · intro b h
+    rw [← h]
+    simp only [SetLike.coe_sort_coe, map_mul, Subgroup.coe_mul]
+    have hb2 : (fullOrderMonoidHom s) b.2.val = 1 := by
+      unfold fullOrderMonoidHom
+      simp only [SetLike.coe_sort_coe, OrderMonoidHom.comp_apply]
+      suffices ((ArchimedeanQuotient.orderMonoidHom s) b.2.val) = 1 by
+        rw [this]
+        simp
+      unfold ArchimedeanQuotient.orderMonoidHom
+      simp
+    ext
+    · simp only [SetLike.coe_sort_coe, Subgroup.coe_mul]
+      rw [ArchimedeanComplement.roundtrip]
+      rw [hb2]
+      simp
+    · simp only [SetLike.coe_sort_coe]
+      rw [ArchimedeanComplement.roundtrip]
+      rw [hb2]
+      simp
+
+
+
+
+/-theorem ArchimedeanComplement.shave_anti (s : UpperSet (ArchimedeanClass M)) (t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier] (hst : s.carrier ⊆ t.carrier) (a : M):
+    ArchimedeanClass.mk (a / ((ArchimedeanComplement.fullOrderMonoidHom t) a).val)
+    ≤ ArchimedeanClass.mk (a / ((ArchimedeanComplement.fullOrderMonoidHom s) a).val) := by
+
+  unfold ArchimedeanComplement.fullOrderMonoidHom instOrderMonoidHom instMonoidHom
+    ArchimedeanQuotient.orderMonoidHom
+  simp only [OrderMonoidHom.comp_apply, OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply,
+    MonoidHom.coe_mk, OneHom.coe_mk]
+  apply ArchimedeanQuotient.repr_anti s t hst
+-/
+
 ----------------------------------------------------------------------------------------------------------
 
 noncomputable
@@ -2564,6 +2694,10 @@ theorem ArchimedeanWindow.classOuterRange (s t : UpperSet (ArchimedeanClass M))
   refine s.upper ?_ hs
   rw [← ht]
   apply ArchimedeanComplement.fullOrderMonoidHom_classUp
+
+instance ArchimedeanWindow.orderedMonoid (s t : UpperSet (ArchimedeanClass M))
+    [Nonempty s.carrier] [Nonempty t.carrier]:
+    IsOrderedMonoid (ArchimedeanWindow s t) := by infer_instance
 
 noncomputable
 def ArchmedeanDecomp (s t : UpperSet (ArchimedeanClass M))
@@ -2742,16 +2876,22 @@ theorem Pi.mulOfSupport_mul_def
   rw [Subtype.eq_iff]
   rfl
 
+theorem Pi.mulOfSupport_mul_def'
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → CommGroup (β a)]
+    (a b : { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF }) :
+    (a * b).val = a.val * b.val := by
+  rfl
+
 
 
 
 instance Pi.groupOfSupport
     {ι : Type*} {β : ι → Type*} [LinearOrder ι] [(a : ι) → CommGroup (β a)]:
-    Group { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF } where
+    CommGroup { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF } where
   mul_assoc (a b c) := by
-    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
-    simp only [Subtype.mk.injEq]
-    apply mul_assoc
+    rw [Pi.mulOfSupport_mul_def, Pi.mulOfSupport_mul_def']
+    rw [mul_assoc]
+    rw [← Pi.mulOfSupport_mul_def', ← Pi.mulOfSupport_mul_def']
   one := ⟨ 1, by
     convert Set.isWF_empty
     apply Set.eq_empty_of_forall_not_mem
@@ -2781,6 +2921,48 @@ instance Pi.groupOfSupport
     unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
     simp only [ne_eq, inv_mul_cancel]
     rfl
+  mul_comm (a b) := by
+    unfold HMul.hMul instHMul Mul.mul Pi.mulOfSupport
+    simp only [ne_eq, Subtype.mk.injEq]
+    apply mul_comm
+
+
+/-instance Pi.Lex.isOrderedMonoid {ι : Type u_1} {α : ι → Type u_2} [LinearOrder ι]
+  [(i : ι) → CommMonoid (α i)] [(i : ι) → LinearOrder (α i)] [∀ (i : ι), IsOrderedMonoid (α i)] :
+  IsOrderedMonoid (Lex ((i : ι) → α i)) where
+
+  mul_le_mul_left _ _ hxy z :=
+    hxy.elim (fun hxyz => hxyz ▸ le_rfl) fun ⟨i, hi⟩ =>
+      Or.inr ⟨i, fun j hji => congr_arg (z j * ·) (hi.1 j hji), mul_lt_mul_left' hi.2 _⟩-/
+
+-- This works because IsOrderedMonoid.toIsOrderedCancelMonoid
+-- optimize
+instance Pi.orderedMonoidOfSupport
+    {ι : Type*} {β : ι → Type*} [LinearOrder ι]
+    [(a : ι) → CommGroup (β a)]
+    [(a : ι) → LinearOrder (β a)]
+    [(a : ι) → IsOrderedMonoid (β a)]:
+    IsOrderedMonoid { f : Lex ((i : ι) → β i) // {i : ι | f i ≠ 1}.IsWF } where
+  mul_le_mul_left := by
+    intro a b h c
+
+    obtain heq|hlt := eq_or_lt_of_le h
+    · rw [heq]
+    · apply le_of_lt
+      rw [← Subtype.coe_lt_coe]
+      rw [Pi.mulOfSupport_mul_def', Pi.mulOfSupport_mul_def']
+      rw [← Subtype.coe_lt_coe] at hlt
+      obtain ⟨i, ⟨hi1, hi2⟩⟩ := hlt
+      use i
+      constructor
+      · intro j hij
+        obtain hi := hi1 j hij
+        rw [Pi.mul_apply, Pi.mul_apply]
+        rw [hi]
+      · simp only [ne_eq]
+        rw [Pi.mul_apply, Pi.mul_apply]
+        apply mul_lt_mul_left' hi2
+
 
 
 --------------------------------------------------------------------------------------------
@@ -2829,14 +3011,197 @@ def ArchimedeanSlice.mk_sliced {s : ArchimedeanClass M} (hs : s ≠ 1) (a : M) :
   )) outer).1
 
 
+noncomputable
+abbrev ArchimedeanToLex (a : M) : Lex ((i : {s : ArchimedeanClass M // s ≠ 1}) → ArchimedeanSlice i.prop) :=
+  toLex fun s ↦ ArchimedeanSlice.mk_sliced s.prop a
+
+/-theorem ArchimedeanToLex_WF (a : M) :
+    {i : {s : ArchimedeanClass M // s ≠ 1} | (ArchimedeanToLex a) i ≠ 1}.IsWF := by
+
+  apply Set.isWF_iff_no_descending_seq.mpr
+  intro g hanti
+  by_contra! hinfinite
+  simp_rw [Set.mem_setOf] at hinfinite
+  let closure := upperClosure (Set.range (fun n ↦ (g n).val))
+  have : Nonempty closure.carrier := by
+    use (g 1).val
+    apply mem_upperClosure.mpr
+    use (g 1).val
+    simp
+  let a_sub := (ArchmedeanDecomp (UpperSet.univ _) closure (by
+    intro a h
+    trivial
+  ) ⟨a, by trivial⟩).2
+  have : ArchimedeanClass.mk a_sub.val ∈ closure := by
+    unfold a_sub ArchmedeanDecomp ArchimedeanWindow.ofOuterGroup
+    simp only [OrderMonoidIso.coe_mk, MulEquiv.coe_mk, Equiv.coe_fn_mk]
+    apply ArchimedeanComplement.fullOrderMonoidHom_shortDist
+  obtain ⟨g1, ⟨hg1range, hg1le⟩⟩ := mem_upperClosure.mp this
+  obtain ⟨n1, hn1⟩ := Set.mem_range.mp hg1range
+  let g2 := (g (n1 + 1)).val
+  have hg2g1 : g2 < g1 := by
+    rw [← hn1]
+    apply Subtype.coe_lt_coe.mpr
+    apply hanti
+    simp
+  obtain hg2 : g2 < (ArchimedeanClass.mk a_sub.val) := lt_of_lt_of_le hg2g1 hg1le
+  obtain hg2lex: ArchimedeanToLex a ⟨g2, _⟩ ≠ 1 := hinfinite (n1 + 1)
+  contrapose! hg2lex
+  unfold ArchimedeanToLex ArchimedeanSlice.mk_sliced ArchmedeanDecomp ArchimedeanWindow.ofOuterGroup
+    --ArchimedeanComplement.fullOrderMonoidHom
+  simp only [ne_eq, toDual_add, toDual_one, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi,
+    OrderMonoidIso.coe_mk, MulEquiv.coe_mk, Equiv.coe_fn_mk, map_div, SubgroupClass.coe_div,
+    Pi.toLex_apply, Subgroup.mk_eq_one]
+  rw [← map_div]
+  nth_rw 1 [ArchimedeanComplement.fullOrderMonoidHom]
+  simp only [OrderMonoidHom.comp_apply]
+  convert map_one (ArchimedeanComplement.instOrderMonoidHom (UpperSet.Ioi g2))
+  unfold ArchimedeanQuotient.orderMonoidHom
+  simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply]
+  rw [QuotientGroup.eq_one_iff]
+  unfold ArchimedeanSubgroup
+  simp only [UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, UpperSet.coe_Ici, Subgroup.mem_mk,
+    Set.mem_preimage, Set.mem_Ioi]
+
+  unfold a_sub ArchmedeanDecomp ArchimedeanWindow.ofOuterGroup at hg1le
+  simp at hg1le
+
+  refine lt_of_lt_of_le hg2g1 (le_trans hg1le ?_)
+  apply ArchimedeanComplement.shave_anti
+  intro g3 hg3
+  simp only [UpperSet.carrier_eq_coe, UpperSet.coe_Ici, Set.mem_Ici] at hg3
+  apply mem_upperClosure.mpr
+  use g2
+  constructor
+  · simp only [ne_eq, Set.mem_range]
+    use n1 + 1
+  · exact hg3
+-/
+
+
+theorem ArchimedeanToLex_strictMono : StrictMono (ArchimedeanToLex (M := M)) := by
+  intro a b h
+  use ⟨ArchimedeanClass.mk (b / a), by
+    contrapose! h
+    apply le_of_eq
+    obtain h := (ArchimedeanClass.mk_eq_one _).mpr h
+    exact div_eq_one.mp h
+  ⟩
+  constructor
+  · intro ⟨j, hj⟩ hij
+    rw [Subtype.mk_lt_mk] at hij
+    unfold ArchimedeanToLex ArchimedeanSlice.mk_sliced ArchmedeanDecomp ArchimedeanWindow.ofOuterGroup
+    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, OrderMonoidIso.coe_mk,
+      MulEquiv.coe_mk, Equiv.coe_fn_mk, map_div, SubgroupClass.coe_div, Pi.toLex_apply,
+      Subtype.mk.injEq]
+    congr 1
+    · symm
+      apply eq_of_div_eq_one
+      rw [← map_div]
+      unfold ArchimedeanComplement.fullOrderMonoidHom
+        ArchimedeanComplement.instOrderMonoidHom
+        ArchimedeanComplement.instMonoidHom
+        ArchimedeanQuotient.orderMonoidHom
+        ArchimedeanQuotient.representative
+      simp only [OrderMonoidHom.comp_apply, OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply,
+        QuotientGroup.mk_div, MonoidHom.coe_mk, OneHom.coe_mk, Subgroup.mk_eq_one, toMul_eq_one]
+      convert LinearMap.map_zero _
+      simp only [EmbeddingLike.map_eq_zero_iff]
+      rw [← QuotientGroup.mk_div]
+      have [Nonempty (UpperSet.Ioi j).carrier]:
+        (0 : Additive (ArchimedeanQuotient (UpperSet.Ioi j))) = (Additive.ofMul 1 : Additive (ArchimedeanQuotient (UpperSet.Ioi j))) := rfl
+      simp_rw [this]
+      congr 1
+      rw [QuotientGroup.eq_one_iff]
+      unfold ArchimedeanSubgroup
+      simpa using hij
+    · congr 2
+      symm
+      apply eq_of_div_eq_one
+      rw [← map_div]
+      unfold ArchimedeanComplement.fullOrderMonoidHom
+        ArchimedeanComplement.instOrderMonoidHom
+        ArchimedeanComplement.instMonoidHom
+        ArchimedeanQuotient.orderMonoidHom
+        ArchimedeanQuotient.representative
+      simp only [OrderMonoidHom.comp_apply, OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply,
+        QuotientGroup.mk_div, MonoidHom.coe_mk, OneHom.coe_mk, Subgroup.mk_eq_one, toMul_eq_one]
+      convert LinearMap.map_zero _
+      simp only [EmbeddingLike.map_eq_zero_iff]
+      rw [← QuotientGroup.mk_div]
+      have [Nonempty (UpperSet.Ici j).carrier]:
+        (0 : Additive (ArchimedeanQuotient (UpperSet.Ici j))) = (Additive.ofMul 1 : Additive (ArchimedeanQuotient (UpperSet.Ici j))) := rfl
+      simp_rw [this]
+      congr 1
+      rw [QuotientGroup.eq_one_iff]
+      unfold ArchimedeanSubgroup
+      simpa using (le_of_lt hij)
+  · simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, id_eq, eq_mpr_eq_cast,
+      Pi.toLex_apply]
+    unfold ArchimedeanSlice.mk_sliced ArchmedeanDecomp ArchimedeanWindow.ofOuterGroup
+    simp only [OrderMonoidIso.coe_mk, MulEquiv.coe_mk, Equiv.coe_fn_mk, map_div,
+      SubgroupClass.coe_div, Subtype.mk_lt_mk]
+
+    have [Nonempty (UpperSet.Ioi (ArchimedeanClass.mk (b / a))).carrier] :
+      (ArchimedeanComplement.fullOrderMonoidHom (UpperSet.Ioi (ArchimedeanClass.mk (b / a))))
+      ((ArchimedeanComplement.fullOrderMonoidHom (UpperSet.Ici (ArchimedeanClass.mk (b / a)))) a).val =
+      (ArchimedeanComplement.fullOrderMonoidHom (UpperSet.Ioi (ArchimedeanClass.mk (b / a))))
+      ↑((ArchimedeanComplement.fullOrderMonoidHom (UpperSet.Ici (ArchimedeanClass.mk (b / a)))) b).val := by
+
+      congr 2
+      symm
+      apply eq_of_div_eq_one
+      rw [← map_div]
+      unfold ArchimedeanComplement.fullOrderMonoidHom
+        ArchimedeanComplement.instOrderMonoidHom
+        ArchimedeanComplement.instMonoidHom
+        ArchimedeanQuotient.orderMonoidHom
+        ArchimedeanQuotient.representative
+      simp only [OrderMonoidHom.comp_apply, OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply,
+        MonoidHom.coe_mk, OneHom.coe_mk, QuotientGroup.mk_div, Subgroup.mk_eq_one, toMul_eq_one]
+      convert LinearMap.map_zero _
+      simp only [EmbeddingLike.map_eq_zero_iff]
+      rw [← QuotientGroup.mk_div]
+      have :
+        (0 : Additive (ArchimedeanQuotient (UpperSet.Ici (ArchimedeanClass.mk (b / a))))) =
+        (Additive.ofMul 1 : Additive (ArchimedeanQuotient (UpperSet.Ici (ArchimedeanClass.mk (b / a))))) := rfl
+      simp_rw [this]
+      congr 1
+      rw [QuotientGroup.eq_one_iff]
+      unfold ArchimedeanSubgroup
+      simp
+
+    simp_rw [this]
+    apply div_lt_div_right'
+
+    apply lt_of_le_of_ne
+    · apply OrderMonoidHom.monotone'
+      exact h.le
+    · symm
+      apply div_eq_one.ne.mp
+      rw [← map_div]
+      unfold ArchimedeanComplement.fullOrderMonoidHom
+      simp only [OrderMonoidHom.comp_apply]
+
+      have [Nonempty (UpperSet.Ioi (ArchimedeanClass.mk (b / a))).carrier] :
+        (ArchimedeanComplement.instOrderMonoidHom (UpperSet.Ioi (ArchimedeanClass.mk (b / a))))
+          ((ArchimedeanQuotient.orderMonoidHom (UpperSet.Ioi (ArchimedeanClass.mk (b / a)))) (b / a)) =
+        (ArchimedeanComplement.instOrderMonoidIso (UpperSet.Ioi (ArchimedeanClass.mk (b / a))))
+          ((ArchimedeanQuotient.orderMonoidHom (UpperSet.Ioi (ArchimedeanClass.mk (b / a)))) (b / a)) := by rfl
+
+      simp_rw [this]
+      apply (MulEquiv.map_eq_one_iff _).ne.mpr
+      unfold ArchimedeanQuotient.orderMonoidHom
+      simp only [OrderMonoidHom.coe_mk, QuotientGroup.mk'_apply]
+      apply (QuotientGroup.eq_one_iff _).not.mpr
+      unfold ArchimedeanSubgroup
+      simp
 
 noncomputable
 def ArchimedeanFullDecomp : M →*o
   { f : Lex ((i : {s : ArchimedeanClass M // s ≠ 1}) → ArchimedeanSlice i.prop) //
     {i : {s : ArchimedeanClass M // s ≠ 1} | f i ≠ 1}.IsWF } where
-  toFun (a) := ⟨fun s ↦ ArchimedeanSlice.mk_sliced s.prop a, by
-    sorry
-  ⟩
+  toFun (a) := ⟨ArchimedeanToLex a, by sorry⟩
   map_mul' (a b) := by
     symm
     apply (Pi.mulOfSupport_mul_def _ _ _).mpr
@@ -2844,7 +3209,37 @@ def ArchimedeanFullDecomp : M →*o
     rw [Pi.mul_def]
     refine ofLex_inj.mp ?_
     ext x
-    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, Pi.ofLex_apply, Subgroup.coe_mul]
-    sorry
-  map_one' := sorry
-  monotone' := sorry
+    simp only [ne_eq, Pi.toLex_apply, Pi.ofLex_apply, Subgroup.coe_mul]
+    unfold ArchimedeanSlice.mk_sliced
+    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, Pi.toLex_apply]
+    rw [← Subgroup.coe_mul]
+    rw [← Subgroup.coe_mul]
+    rw [← Prod.fst_mul]
+    congr
+    have : Nonempty (UpperSet.Ioi x.val).carrier := ArchimedeanClassIoiNonempty x.prop
+    rw [← map_mul (ArchmedeanDecomp _ _ _)]
+    rw [← Prod.snd_mul]
+    rw [← map_mul (ArchmedeanDecomp _ _ _)]
+    rfl
+  map_one' := by
+    unfold ArchimedeanToLex ArchimedeanSlice.mk_sliced
+    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi]
+    rw [Subtype.eq_iff]
+    simp only
+    refine ofLex_inj.mp ?_
+    simp only [ofLex_toLex]
+    ext x
+    simp only [Pi.ofLex_apply, SetLike.coe_eq_coe]
+
+    have (h : (1 : M) ∈ ArchimedeanSubgroup (UpperSet.univ (ArchimedeanClass M))) :
+      (⟨1, h⟩ : ArchimedeanSubgroup (UpperSet.univ (ArchimedeanClass M))) = 1 := rfl
+    rw [this]
+    rw [map_one, Prod.snd_one, map_one, Prod.fst_one]
+    rfl
+  monotone' := by
+    intro a b h
+    simp only [ne_eq, UpperSet.carrier_eq_coe, UpperSet.coe_Ioi, Subtype.mk_le_mk]
+    obtain heq|hlt := eq_or_lt_of_le h
+    · rw [heq]
+    · apply le_of_lt
+      apply ArchimedeanToLex_strictMono hlt
