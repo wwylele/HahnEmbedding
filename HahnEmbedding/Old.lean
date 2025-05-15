@@ -15,22 +15,8 @@ import Mathlib.Order.PiLex
 import Mathlib.Order.UpperLower.Closure
 import Mathlib.GroupTheory.Complement
 
-section Patch
-theorem pow_le_self {M : Type*} [Monoid M] [Preorder M] [MulLeftMono M] {a : M} {n : ℕ} (ha : a ≤ 1) (hn : n ≠ 0) :
-  a ^ n ≤ a := by
-  simpa using pow_le_pow_right_of_le_one' ha (Nat.one_le_iff_ne_zero.2 hn)
 
-
-theorem pow_le_pow_iff_left' {M : Type*} [Monoid M] [LinearOrder M] [h : MulLeftStrictMono M] [MulRightStrictMono M] {a b : M} {n : ℕ} (hn : n ≠ 0) :
-  a ^ n ≤ b ^ n ↔ a ≤ b := by
-  constructor
-  · apply le_of_pow_le_pow_left' hn
-  · intro h
-    have : MulLeftMono M := mulLeftMono_of_mulLeftStrictMono M
-    have : MulRightMono M := mulRightMono_of_mulRightStrictMono M
-    apply pow_le_pow_left' h
-
-end Patch
+import HahnEmbedding.Misc
 
 variable {M : Type*}
 variable [CommMonoid M] [LinearOrder M]
