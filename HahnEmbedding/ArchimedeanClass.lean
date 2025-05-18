@@ -17,30 +17,7 @@ import Mathlib.GroupTheory.Complement
 import Mathlib.Algebra.Order.AbsoluteValue.Basic
 import Mathlib.Tactic.Qify
 
-
-section Patch
-
-@[to_additive]
-theorem pow_le_pow_iff_left' {M : Type*} [Monoid M] [LinearOrder M] [h : MulLeftStrictMono M] [MulRightStrictMono M] {a b : M} {n : ℕ} (hn : n ≠ 0) :
-  a ^ n ≤ b ^ n ↔ a ≤ b := by
-  constructor
-  · apply le_of_pow_le_pow_left' hn
-  · intro h
-    have : MulLeftMono M := mulLeftMono_of_mulLeftStrictMono M
-    have : MulRightMono M := mulRightMono_of_mulRightStrictMono M
-    apply pow_le_pow_left' h
-
-@[to_additive]
-theorem pow_lt_pow_iff_left' {M : Type*} [Monoid M] [LinearOrder M] [h : MulLeftStrictMono M] [MulRightStrictMono M] {a b : M} {n : ℕ} (hn : n ≠ 0) :
-  a ^ n < b ^ n ↔ a < b := by
-  constructor
-  · have : MulLeftMono M := mulLeftMono_of_mulLeftStrictMono M
-    have : MulRightMono M := mulRightMono_of_mulRightStrictMono M
-    apply lt_of_pow_lt_pow_left' n
-  · apply pow_lt_pow_left' hn
-
-
-end Patch
+import HahnEmbedding.Misc
 
 
 variable {M: Type*}
@@ -131,6 +108,14 @@ theorem one_out : (1 : mulArchimedeanClass M).out = 1 := by
 
 variable (M) in
 @[to_additive]
+instance instNontrivial [Nontrivial M]: Nontrivial (mulArchimedeanClass M) where
+  exists_pair_ne := by
+    obtain ⟨x, hx⟩ := exists_ne (1 : M)
+    use mk x, 1
+    apply eq_one_iff.ne.mpr hx
+
+variable (M) in
+@[to_additive]
 noncomputable
 instance instLinearOrder : LinearOrder (mulArchimedeanClass M) :=
   LinearOrder.lift' (fun A ↦ OrderDual.toDual |A.out|ₘ) (by
@@ -150,6 +135,11 @@ theorem lt (A B : mulArchimedeanClass M) : A < B ↔ |B.out|ₘ < |A.out|ₘ := 
 theorem le_one (A : mulArchimedeanClass M) : A ≤ 1 := by
   rw [le]
   simp
+
+@[to_additive]
+theorem ne_one_of_lt {A B : mulArchimedeanClass M} (h : A < B) : A ≠ 1 := by
+  apply ne_of_lt
+  exact lt_of_lt_of_le h (le_one _)
 
 variable (M) in
 @[to_additive]
@@ -284,6 +274,68 @@ theorem archimedean_of_mk_eq_mk (h : ∀ (a b : M), a ≠ 1 → b ≠ 1 → mk a
       use m
       rw [mabs_eq_self.mpr hx.le, mabs_eq_self.mpr hy.le] at hm
       exact hm
+
+
+variable {N: Type*}
+variable [CommGroup N] [LinearOrder N] [IsOrderedMonoid N]
+
+@[to_additive]
+noncomputable
+abbrev orderHomFun {F : Type*} [FunLike F M N]
+    (f : F) (a : mulArchimedeanClass M) : mulArchimedeanClass N :=
+  mulArchimedeanClass.mk (f a.out)
+
+@[to_additive]
+noncomputable
+def orderHom {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) : mulArchimedeanClass M →o mulArchimedeanClass N where
+  toFun := orderHomFun f
+  monotone' := by
+    intro a b h
+    contrapose! h
+    unfold orderHomFun at h
+    rw [mk_lt_mk] at h
+    rw [← out_eq a, ← out_eq b]
+    rw [mk_lt_mk]
+    intro n
+    obtain h := h n
+    contrapose! h
+    obtain h := OrderHomClass.monotone f h
+    rw [map_pow, map_mabs, map_mabs] at h
+    exact h
+
+@[to_additive]
+theorem map_mk {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) (a : M):
+    mk (f a) = (orderHom f) (mk a) := by
+  unfold orderHom orderHomFun
+  simp
+  apply eq.mpr
+  have a_eq : mk a = mk (mk a).out := by
+    rw [out_eq]
+  obtain ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩ := eq.mp a_eq
+  constructor <;> [use m; use n]
+  <;> [refine ⟨hm0, ?_⟩; refine ⟨hn0, ?_⟩]
+  all_goals
+    rw [← map_mabs, ← map_mabs]
+    rw [← map_pow]
+    apply OrderHomClass.monotone
+    try exact hm
+    try exact hn
+
+@[to_additive]
+theorem map_mk_eq {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) {a b : M} (h : mk a = mk b) :
+    mk (f a) = mk (f b) := by
+  rw [map_mk, map_mk, h]
+
+@[to_additive]
+theorem map_mk_le {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) {a b : M} (h : mk a ≤ mk b) :
+    mk (f a) ≤ mk (f b) := by
+  rw [map_mk, map_mk]
+  apply OrderHomClass.monotone
+  exact h
 
 
 end mulArchimedeanClass

@@ -1,6 +1,8 @@
 import HahnEmbedding.ArchimedeanClass
 import HahnEmbedding.Divisible
+import HahnEmbedding.RealEmbed
 import Mathlib.Algebra.Module.Submodule.Lattice
+import Mathlib.Analysis.RCLike.Basic
 
 
 variable {M: Type*}
@@ -114,6 +116,9 @@ def toSubmodule (s : UpperSet (archimedeanClass M)) : Submodule ℚ M := {
       exact Or.inr ha
 }
 
+theorem mem_submodule_iff_mem (s : UpperSet (archimedeanClass M)) (a : M) :
+    a ∈ toSubmodule s ↔ a ∈ archimedeanSubgroup s := by rfl
+
 theorem exists_compl_of_le {s t : UpperSet (archimedeanClass M)} (hs : s.carrier.Nonempty) (ht : t.carrier.Nonempty)
     (hst : s ≤ t) :
     ∃ A : Submodule ℚ M, (toSubmodule t) ⊓ A = ⊥
@@ -159,6 +164,11 @@ theorem eq_of_nonzero {A : archimedeanClass M} (hA : A ≠ 0) :
   unfold archimedeanGrade
   simp [hA]
 
+theorem eq_of_zero {A : archimedeanClass M} (hA : A = 0) :
+    archimedeanGrade A = ⊥ := by
+  unfold archimedeanGrade
+  simp [hA]
+
 theorem disj_Ioi {A : archimedeanClass M} (hA : A ≠ 0) :
     (archimedeanSubgroup.toSubmodule (UpperSet.Ioi A)) ⊓ archimedeanGrade A = ⊥ := by
   rw [eq_of_nonzero hA]
@@ -171,6 +181,30 @@ theorem codisj_Ioi {A : archimedeanClass M} (hA : A ≠ 0) :
   rw [eq_of_nonzero hA]
   exact (Exists.choose_spec (archimedeanSubgroup.exists_compl_of_le (s := UpperSet.Ici A) (t := UpperSet.Ioi A)
     (by simp) (archimedeanClass.Ioi_nonempty hA) (by apply UpperSet.Ici_le_Ioi))).2
+
+theorem nontrivial_of_nonzero {A : archimedeanClass M} (hA : A ≠ 0) :
+    Nontrivial (archimedeanGrade A) := by
+  by_contra! htrivial
+  have hbot : archimedeanGrade A = ⊥ := by
+    simpa using Submodule.nontrivial_iff_ne_bot.not.mp htrivial
+  obtain hcodisj := codisj_Ioi hA
+  rw [hbot] at hcodisj
+  simp only [bot_le, sup_of_le_left] at hcodisj
+  contrapose! hcodisj
+  suffices archimedeanSubgroup (UpperSet.Ioi A) ≠ archimedeanSubgroup (UpperSet.Ici A) by
+    contrapose! this
+    unfold archimedeanSubgroup.toSubmodule at this
+    simpa using this
+  apply ne_of_lt
+  apply archimedeanSubgroup.lt_of_lt (by simp) (archimedeanClass.Ioi_nonempty hA)
+  apply lt_of_le_of_ne
+  · exact UpperSet.Ici_le_Ioi A
+  · apply UpperSet.ext_iff.ne.mpr
+    simp only [UpperSet.coe_Ici, UpperSet.coe_Ioi]
+    by_contra! h
+    have h' : A ∈ Set.Ici A := Set.left_mem_Ici
+    rw [h] at h'
+    simp at h'
 
 theorem le_Ici {A : archimedeanClass M} (hA : A ≠ 0) :
     archimedeanGrade A ≤ (archimedeanSubgroup.toSubmodule (UpperSet.Ici A)) := by
@@ -220,14 +254,45 @@ theorem mem_class_of_nonzero {A : archimedeanClass M} (hA : A ≠ 0) {a : M}
       (archimedeanSubgroup.mem_iff (by apply archimedeanClass.Ioi_nonempty hA) a).mpr hlt
     exact (Submodule.disjoint_def.mp (disjoint_iff.mpr (disj_Ioi hA))) a ha' ha
 
-theorem archimedean {A : archimedeanClass M} (hA : A ≠ 0) : Archimedean (archimedeanGrade A) := by
-  apply archimedeanClass.archimedean_of_mk_eq_mk
-  intro a b ha hb
-  suffices archimedeanClass.mk a.val = archimedeanClass.mk b.val by
-    rw [archimedeanClass.eq] at this ⊢
-    exact this
-  rw [mem_class_of_nonzero hA (by simp) (by simpa using ha)]
-  rw [mem_class_of_nonzero hA (by simp) (by simpa using hb)]
+instance archimedean (A : archimedeanClass M) : Archimedean (archimedeanGrade A) := by
+  by_cases hA : A = 0
+  · rw [eq_of_zero hA]
+    apply archimedeanClass.archimedean_of_mk_eq_mk
+    intro a b ha hb
+    obtain ha' := a.prop
+    simp only [Submodule.mem_bot, ZeroMemClass.coe_eq_zero] at ha'
+    contradiction
+  · apply archimedeanClass.archimedean_of_mk_eq_mk
+    intro a b ha hb
+    suffices archimedeanClass.mk a.val = archimedeanClass.mk b.val by
+      rw [archimedeanClass.eq] at this ⊢
+      exact this
+    rw [mem_class_of_nonzero hA (by simp) (by simpa using ha)]
+    rw [mem_class_of_nonzero hA (by simp) (by simpa using hb)]
+
+noncomputable
+def embedReal (A : archimedeanClass M) : archimedeanGrade A →+o ℝ :=
+  Archimedean.embedReal (archimedeanGrade A)
+
+theorem embedReal_injective (A : archimedeanClass M) : Function.Injective (embedReal A) :=
+  Archimedean.embedReal_injective (archimedeanGrade A)
+
+noncomputable
+def embedReal_linear (A : archimedeanClass M) : archimedeanGrade A →ₗ[ℚ] ℝ := {
+  embedReal A with
+  map_smul' (q) (a) := by
+    have (x) : ((embedReal A).toAddMonoidHom).toFun x = (embedReal A) x := by rfl
+    rw [this, this]
+    simp only [eq_ratCast, Rat.cast_eq_id, id_eq]
+    apply smul_right_injective ℝ (by simp : q.den ≠ 0)
+    simp only
+    rw [← map_nsmul]
+    rw [← Nat.cast_smul_eq_nsmul ℚ, ← Nat.cast_smul_eq_nsmul ℚ]
+    rw [smul_smul, Rat.den_mul_eq_num, Int.cast_smul_eq_zsmul]
+    rw [smul_smul, Rat.den_mul_eq_num, Int.cast_smul_eq_zsmul]
+    rw [← map_zsmul]
+
+}
 
 end archimedeanGrade
 

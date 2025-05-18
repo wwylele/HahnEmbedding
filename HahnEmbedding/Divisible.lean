@@ -67,12 +67,14 @@ end RootableBy
 
 namespace DivisibleBy
 
+@[instance 100]
 instance instSMul (M : Type*) [AddGroup M] [h : DivisibleBy M ℕ] : SMul ℚ M where
   smul (s : ℚ) (a : M) := div (s.num • a) s.den
 
 theorem rat_smul_eq {M : Type*} [AddGroup M] [h : DivisibleBy M ℕ] (s : ℚ) (a : M) :
   s • a = div (s.num • a) s.den := rfl
 
+@[instance 100]
 instance instModule (M : Type*) [AddCommGroup M] [h : DivisibleBy M ℕ] [IsAddTorsionFree M] :
     Module ℚ M where
   one_smul := by

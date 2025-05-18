@@ -257,12 +257,47 @@ theorem Archimedean.embedReal_strictMono {one : M} (hone: 0 < one) :
   norm_cast
 
 noncomputable
-def Archimedean.embedReal {one : M} (hone: 0 < one) : M →+o ℝ where
+def Archimedean.embedReal_of_pos {one : M} (hone: 0 < one) : M →+o ℝ where
   toFun := embedRealFun hone
   map_zero' := embedReal_map_zero hone
   map_add' := embedReal_map_add hone
   monotone' := (embedReal_strictMono hone).monotone
 
-theorem Archimedean.embedReal_injective {one : M} (hone: 0 < one) :
-    Function.Injective (embedReal hone) :=
+theorem Archimedean.embedReal_of_pos_injective {one : M} (hone: 0 < one) :
+    Function.Injective (embedReal_of_pos hone) :=
   (embedReal_strictMono hone).injective
+
+noncomputable
+def Archimedean.embedReal_of_trivial : M →+o ℝ where
+  toFun := fun _ ↦ 0
+  map_zero' := by simp
+  map_add' := by simp
+  monotone' := by
+    intro a b h
+    simp
+
+theorem Archimedean.embedReal_of_trivial_injective {M : Type*} [AddCommGroup M] [LinearOrder M]
+    (h : Subsingleton M) :
+    Function.Injective (embedReal_of_trivial (M := M)) :=
+  Function.injective_of_subsingleton embedReal_of_trivial
+
+open Classical in
+variable (M) in
+noncomputable
+def Archimedean.embedReal : M →+o ℝ :=
+  if h : Subsingleton M then
+    embedReal_of_trivial
+  else
+    have : Nontrivial M := not_subsingleton_iff_nontrivial.mp h
+    let h := exists_ne (0 : M)
+    let a := h.choose
+    have ha : 0 < |a| := by simpa using h.choose_spec
+    embedReal_of_pos ha
+
+
+variable (M) in
+theorem Archimedean.embedReal_injective : Function.Injective (embedReal M) := by
+  unfold embedReal
+  split_ifs with h
+  · exact embedReal_of_trivial_injective h
+  · apply embedReal_of_pos_injective
