@@ -470,7 +470,32 @@ theorem SubEmbedding.eval_lt (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain
       unfold nhds
       simpa using hj
     rw [SubEmbedding.eval_eq e x j.prop (le_refl _) hy]
-  · have hnonempty : (e.nhds x (archimedeanClass.mk (x - y.val))).Nonempty := by sorry
+  · have hnonempty : (e.nhds x (archimedeanClass.mk (x - y.val))).Nonempty := by
+      by_contra! hempty
+      have : e.eval_hahn x = (HahnSeries.cut _ _ ⟨archimedeanClass.mk (x - y.val), h0⟩) (e.f y) := by
+        ext i
+        unfold HahnSeries.cut HahnSeries.cut_fun
+        simp only [LinearMap.coe_mk, AddHom.coe_mk]
+        split_ifs with hi
+        · have hempty': ¬ (e.nhds x i.val).Nonempty := by
+            contrapose! hempty
+            refine Set.Nonempty.mono ?_ hempty
+            apply SubEmbedding.nhds_anti
+            simpa using hi
+          unfold eval_hahn eval
+          simp [hempty']
+        · simp only [ne_eq, not_le] at hi
+          unfold eval_hahn
+          apply eval_eq e x _ (le_refl _)
+          unfold nhds
+          simpa using hi
+      obtain hmem := e.range_cut (e.f y) (by simp) ⟨archimedeanClass.mk (x - y.val), h0⟩
+      rw [← this] at hmem
+      simp only [Set.mem_range] at hmem
+      obtain ⟨z, hz⟩ := hmem
+      obtain hzwhat := SubEmbedding.eval_ne_of_not_mem e hx z
+      rw [hz] at hzwhat
+      simp at hzwhat
     obtain ⟨z, hz⟩ := hnonempty
     rw [SubEmbedding.eval_eq e x h0 (le_refl _) hz]
 
@@ -504,6 +529,109 @@ theorem SubEmbedding.eval_lt (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain
       apply le_antisymm
       · by_contra! hlt
         obtain hj := hj ⟨archimedeanClass.mk (x - y.val), h0⟩ hlt
+        obtain hj := sub_eq_zero_of_eq hj
+        rw [← HahnSeries.coeff_sub, ← LinearPMap.map_sub] at hj
+        simp_rw [← hzyclass] at hj
+        contrapose! hj
+        apply SubEmbedding.coeff_nonzero_at_class
+      · contrapose! hi
+        apply le_of_eq
+        simp_rw [← hzyclass] at hi
+        apply eq_of_sub_eq_zero
+        rw [← HahnSeries.coeff_sub, ← LinearPMap.map_sub]
+        apply coeff_zero_of_class_gt
+        rw [← archimedeanClass.mk_neg, neg_sub]
+        exact hi
+    rw [hieq] at hi
+    exact hi
+
+/-- Ehhh -/
+theorem SubEmbedding.lt_eval (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain)
+    (y : e.f.domain) (h : y.val < x) :
+    e.f y < e.eval_hahn x := by
+  unfold eval_hahn
+  rw [HahnSeries.lt_iff]
+  simp only
+
+  have h0 : archimedeanClass.mk (x - y.val) ≠ 0 :=
+    archimedeanClass.eq_zero_iff.ne.mpr <| sub_ne_zero_of_ne h.ne.symm
+
+  have h0' := h0
+  rw [← archimedeanClass.mk_neg, neg_sub] at h0'
+
+  use ⟨archimedeanClass.mk (y.val - x), h0'⟩
+  constructor
+  · intro j hj
+    have hy : y.val ∈ e.nhds x j.val := by
+      unfold nhds
+      simp only [ne_eq, Set.mem_setOf_eq, SetLike.coe_mem, true_and]
+      rw [← archimedeanClass.mk_neg, neg_sub]
+      exact hj
+    rw [SubEmbedding.eval_eq e x j.prop (le_refl _) hy]
+  · have hnonempty : (e.nhds x (archimedeanClass.mk (x - y.val))).Nonempty := by
+      by_contra! hempty
+      have : e.eval_hahn x = (HahnSeries.cut _ _ ⟨archimedeanClass.mk (x - y.val), h0⟩) (e.f y) := by
+        ext i
+        unfold HahnSeries.cut HahnSeries.cut_fun
+        simp only [LinearMap.coe_mk, AddHom.coe_mk]
+        split_ifs with hi
+        · have hempty': ¬ (e.nhds x i.val).Nonempty := by
+            contrapose! hempty
+            refine Set.Nonempty.mono ?_ hempty
+            apply SubEmbedding.nhds_anti
+            simpa using hi
+          unfold eval_hahn eval
+          simp [hempty']
+        · simp only [ne_eq, not_le] at hi
+          unfold eval_hahn
+          apply eval_eq e x _ (le_refl _)
+          unfold nhds
+          simpa using hi
+      obtain hmem := e.range_cut (e.f y) (by simp) ⟨archimedeanClass.mk (x - y.val), h0⟩
+      rw [← this] at hmem
+      simp only [Set.mem_range] at hmem
+      obtain ⟨z, hz⟩ := hmem
+      obtain hzwhat := SubEmbedding.eval_ne_of_not_mem e hx z
+      rw [hz] at hzwhat
+      simp at hzwhat
+    obtain ⟨z, hz⟩ := hnonempty
+    obtain hrw := SubEmbedding.eval_eq e x h0' (
+      show archimedeanClass.mk (y.val - x) ≤ archimedeanClass.mk (x - y.val) by
+        rw [← archimedeanClass.mk_neg, neg_sub]
+      ) hz
+    rw [← archimedeanClass.mk_neg, neg_sub] at hz
+    rw [hrw]
+
+    unfold nhds at hz
+    simp only [Set.mem_setOf_eq] at hz
+    nth_rw 2 [← archimedeanClass.mk_neg] at hz
+    rw [neg_sub] at hz
+
+
+    have hzyclass : archimedeanClass.mk (y.val - z) = archimedeanClass.mk (y.val - x) := by
+      symm
+      have : y.val - z = y.val - x + (x - z) := by abel
+      rw [this]
+      apply archimedeanClass.mk_eq_mk_self_add_of_mk_lt
+      rw [← archimedeanClass.mk_neg (x - z), neg_sub]
+      exact hz.2
+
+    have hzy0 : archimedeanClass.mk (y.val - z) ≠ 0 := hzyclass.symm ▸ h0'
+
+    have hzy : y < ⟨z, hz.1⟩ := by
+      show y.val < z
+      apply (sub_lt_sub_iff_right x).mp
+      refine archimedeanClass.lt_of_mk_lt_mk' ?_ (sub_nonpos_of_le h.le)
+      exact hz.2
+
+    have hzy := e.strictMono.lt_iff_lt.mpr hzy
+
+    rw [HahnSeries.lt_iff] at hzy
+    obtain ⟨i, hj, hi⟩ := hzy
+    have hieq : i = ⟨archimedeanClass.mk (y.val - x), h0'⟩ := by
+      apply le_antisymm
+      · by_contra! hlt
+        obtain hj := hj ⟨archimedeanClass.mk (y.val - x), h0'⟩ hlt
         obtain hj := sub_eq_zero_of_eq hj
         rw [← HahnSeries.coeff_sub, ← LinearPMap.map_sub] at hj
         simp_rw [← hzyclass] at hj
@@ -579,7 +707,10 @@ theorem SubEmbedding.ext_fun_strictMono (e : SubEmbedding M) {x : M} (hx : x ∉
   by_cases hc0 : c = 0
   · rw [hc0] at habpos ⊢
     simp only [zero_smul, ne_eq, neg_zero] at habpos ⊢
-    sorry
+    have : 0 = e.f 0 := by simp
+    rw [this]
+    apply e.strictMono
+    simpa using habpos
   · have : a = (-c) • ((-c)⁻¹ • a) := by
       rw [smul_smul]
       rw [mul_inv_cancel₀ (neg_ne_zero.mpr hc0)]
@@ -604,7 +735,8 @@ theorem SubEmbedding.ext_fun_strictMono (e : SubEmbedding M) {x : M} (hx : x ∉
     · have : -c < 0 := neg_neg_iff_pos.mpr hcpos
       refine smul_lt_smul_of_neg_left ?_ this
       obtain h := lt_of_smul_lt_smul_of_nonpos habpos this.le
-      sorry
+      apply SubEmbedding.lt_eval e hx
+      exact h
 
 
 noncomputable
@@ -616,4 +748,19 @@ def SubEmbedding.ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubE
 
     sorry
 
-  range_cut := sorry
+  range_cut := by
+    intro a ha c
+    simp only [Set.mem_range] at ha
+    obtain ⟨⟨a', ha'mem⟩, ha'⟩ := ha
+    simp only [LinearPMap.domain_supSpanSingleton] at ha'mem
+    obtain ⟨b, hbmem, hc, hcmem, hbc⟩ := Submodule.mem_sup.mp ha'mem
+    obtain ⟨k, hk⟩ := Submodule.mem_span_singleton.mp hcmem
+    rw [← hk] at hbc
+    simp_rw [← hbc] at ha'
+    unfold ext_fun at ha'
+    rw [LinearPMap.supSpanSingleton_apply_mk e.f x _ hx b hbmem k] at ha'
+    simp only [Set.mem_range]
+
+
+    --use (⟨b, hbmem⟩ : e.f.domain) + k • ??
+    sorry

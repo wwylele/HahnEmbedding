@@ -260,6 +260,13 @@ theorem lt_of_mk_lt_mk {a b : M} (h : mk a < mk b) (hpos : 1 ≤ a) : b < a := b
   exact h.2
 
 @[to_additive]
+theorem lt_of_mk_lt_mk' {a b : M} (h : mk a < mk b) (hneg : a ≤ 1) : a < b := by
+  obtain h := (mk_lt_mk).mp h 1
+  rw [pow_one, mabs_lt, mabs_eq_inv_self.mpr hneg] at h
+  simp only [inv_inv] at h
+  exact h.1
+
+@[to_additive]
 theorem Ioi_nonempty {A : mulArchimedeanClass M} (hA : A ≠ 1):
     (UpperSet.Ioi A).carrier.Nonempty := by
   use 1
