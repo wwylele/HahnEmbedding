@@ -1,6 +1,38 @@
 import HahnEmbedding.ArchimedeanSubgroup
 import Mathlib.RingTheory.HahnSeries.Addition
 import Mathlib.LinearAlgebra.Span.Defs
+import Mathlib.LinearAlgebra.LinearPMap
+import Mathlib.Order.WellFoundedSet
+
+open Classical in
+noncomputable
+def HahnSeries.cut_fun (Γ : Type*) (R : Type*) [PartialOrder Γ] [Zero R]
+    (c : Γ) (x : HahnSeries Γ R) : HahnSeries Γ R where
+  coeff (i) := if c ≤ i then 0 else x.coeff i
+  isPWO_support' := by
+    apply Set.IsPWO.mono x.isPWO_support
+    simp
+
+noncomputable
+def HahnSeries.cut (Γ : Type*) (R : Type*) [PartialOrder Γ] [Semiring R]
+    (c : Γ) : HahnSeries Γ R →ₗ[R] HahnSeries Γ R where
+  toFun := HahnSeries.cut_fun Γ R c
+  map_add' := by
+    intro x y
+    unfold cut_fun
+    apply HahnSeries.ext
+    ext i
+    simp only [coeff_add', Pi.add_apply]
+    split_ifs
+    · simp
+    · simp
+  map_smul' := by
+    intro m x
+    unfold cut_fun
+    apply HahnSeries.ext
+    ext i
+    simp
+
 
 instance HahnSeries.instPartialOrder (Γ : Type*) (R : Type*)
     [LinearOrder Γ] [Zero R] [PartialOrder R] : PartialOrder (HahnSeries Γ R) :=
@@ -113,93 +145,116 @@ variable [AddCommGroup M] [LinearOrder M] [IsOrderedAddMonoid M] [DivisibleBy M 
 
 variable (M) in
 structure SubEmbedding where
-  domain : Submodule ℚ M
-  hdomain : ∀ A : archimedeanClass M, ∀ a ∈ archimedeanGrade A, a ∈ domain
+  f : M →ₗ.[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ
+  hdomain : ∀ A : archimedeanClass M, ∀ a ∈ archimedeanGrade A, a ∈ f.domain
 
-  f : domain →ₗ[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ
   strictMono : StrictMono f
   anchor : ∀ A : archimedeanClass M, ∀ a : M, (ha : a ∈ archimedeanGrade A) →
     (f ⟨a, hdomain A a ha⟩).coeff =
     fun i ↦ if i.val = A then archimedeanGrade.embedReal_linear A ⟨a, ha⟩ else 0
 
+  range_cut : ∀ x ∈ Set.range f, ∀ c : {A : archimedeanClass M // A ≠ 0},
+    (HahnSeries.cut _ _ c) x ∈ Set.range f
+
 noncomputable
 def SubEmbedding.to_orderAddMonoidHom (e : SubEmbedding M) :
-    e.domain →+o HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ where
+    e.f.domain →+o HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ where
   toFun := e.f
   map_zero' := by simp
-  map_add' := by simp
+  map_add' := by
+    intro x y
+    rw [← LinearPMap.map_add]
   monotone' := e.strictMono.monotone
 
-theorem SubEmbedding.eq_orderAddMonoidHom {e : SubEmbedding M} (x : e.domain) :
+theorem SubEmbedding.eq_orderAddMonoidHom {e : SubEmbedding M} (x : e.f.domain) :
     e.f x = e.to_orderAddMonoidHom x := by rfl
 
-theorem SubEmbedding.coeff_zero_of_class_gt (e : SubEmbedding M) {x : M} (hx : x ∈ e.domain)
+theorem SubEmbedding.orderTop_eq_class (e : SubEmbedding M) {x : M} (hx : x ∈ e.f.domain)
+    (hx0 : archimedeanClass.mk x ≠ 0) :
+    (e.f ⟨x, hx⟩).orderTop = WithTop.some (⟨archimedeanClass.mk x, hx0⟩) := by
+
+  have : Nontrivial (archimedeanGrade (archimedeanClass.mk x)) :=
+      archimedeanGrade.nontrivial_of_nonzero hx0
+  obtain ⟨⟨x', hx'mem⟩, hx'0⟩ := exists_ne (0 : archimedeanGrade (archimedeanClass.mk x))
+  have hmkeq: archimedeanClass.mk x' = archimedeanClass.mk x := by
+    refine archimedeanGrade.mem_class_of_nonzero hx0 hx'mem ?_
+    simpa using hx'0
+  have hclasseq : archimedeanClass.mk (⟨x', e.hdomain _ _ hx'mem⟩ : e.f.domain)
+      = archimedeanClass.mk ⟨x, hx⟩ := by
+    rw [archimedeanClass.eq] at hmkeq ⊢
+    exact hmkeq
+
+  obtain h := (archimedeanClass.map_mk_eq (to_orderAddMonoidHom e) hclasseq).symm
+  rw [← eq_orderAddMonoidHom, ← eq_orderAddMonoidHom] at h
+
+  have hfx0 : e.f ⟨x, hx⟩ ≠ 0 := by
+    have : (0 : HahnSeries { A: archimedeanClass M // A ≠ 0 } ℝ) = e.f 0 := by simp
+    rw [this]
+    apply e.strictMono.injective.ne_iff.mpr
+    simpa using hx0
+
+  rw [HahnSeries.archimedeanClass_eq_iff] at h
+
+  have : (e.f ⟨x', e.hdomain _ _ hx'mem⟩).orderTop = WithTop.some ⟨archimedeanClass.mk x',
+      hmkeq.symm ▸ hx0⟩ := by
+    apply HahnSeries.orderTop_eq_of_le
+    · simp only [ne_eq, HahnSeries.mem_support]
+      rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
+      simp only [↓reduceIte]
+      apply (LinearMap.map_eq_zero_iff _ (Archimedean.embedReal_injective _)).ne.mpr
+      simpa using hx'0
+    · intro g' hg
+      contrapose! hg
+      simp only [ne_eq, HahnSeries.mem_support, Decidable.not_not]
+      rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
+      simp only [ne_eq, ite_eq_right_iff]
+      intro hg'
+      obtain hg := Subtype.eq_iff.ne.mp hg.ne
+      simp only [ne_eq] at hg
+      rw [hg'] at hg
+      simp at hg
+  rw [this] at h
+  rw [h]
+  simpa using hmkeq
+
+theorem SubEmbedding.coeff_nonzero_at_class (e : SubEmbedding M) {x : M} (hx : x ∈ e.f.domain)
+    (hx0 : archimedeanClass.mk x ≠ 0) :
+    (e.f ⟨x, hx⟩).coeff ⟨archimedeanClass.mk x, hx0⟩ ≠ 0 := by
+  apply HahnSeries.coeff_orderTop_ne
+  rw [SubEmbedding.orderTop_eq_class e hx hx0]
+
+
+theorem SubEmbedding.coeff_zero_of_class_gt (e : SubEmbedding M) {x : M} (hx : x ∈ e.f.domain)
     {A : archimedeanClass M} (hA : A < archimedeanClass.mk x) :
     (e.f ⟨x, hx⟩).coeff ⟨A, archimedeanClass.ne_zero_of_lt hA⟩ = 0 := by
   by_cases hx0 : x = 0
-  · have : (⟨x, hx⟩ : e.domain) = 0 := by
+  · have : (⟨x, hx⟩ : e.f.domain) = 0 := by
       simp [hx0]
     rw [this]
     simp
   · have hx0' : archimedeanClass.mk x ≠ 0 := archimedeanClass.eq_zero_iff.ne.mpr hx0
-
-    have : Nontrivial (archimedeanGrade (archimedeanClass.mk x)) :=
-      archimedeanGrade.nontrivial_of_nonzero hx0'
-    obtain ⟨⟨x', hx'mem⟩, hx'0⟩ := exists_ne (0 : archimedeanGrade (archimedeanClass.mk x))
-    have hmkeq: archimedeanClass.mk x' = archimedeanClass.mk x := by
-      refine archimedeanGrade.mem_class_of_nonzero hx0' hx'mem ?_
-      simpa using hx'0
-    have : archimedeanClass.mk (⟨x', e.hdomain _ _ hx'mem⟩ : e.domain)
-        = archimedeanClass.mk ⟨x, hx⟩ := by
-      rw [archimedeanClass.eq] at hmkeq ⊢
-      exact hmkeq
-
-    obtain h := (archimedeanClass.map_mk_eq (to_orderAddMonoidHom e) this).symm
-    rw [← eq_orderAddMonoidHom, ← eq_orderAddMonoidHom] at h
-
-    have hfx0 : e.f ⟨x, hx⟩ ≠ 0 := by
-      have : (0 : HahnSeries { A: archimedeanClass M // A ≠ 0 } ℝ) = e.f 0 := by simp
-      rw [this]
-      apply e.strictMono.injective.ne_iff.mpr
-      simpa using hx0
-
-    rw [HahnSeries.archimedeanClass_eq_iff] at h
-
-    have : (e.f ⟨x', e.hdomain _ _ hx'mem⟩).orderTop = WithTop.some ⟨archimedeanClass.mk x',
-        hmkeq.symm ▸ hx0'⟩ := by
-      apply HahnSeries.orderTop_eq_of_le
-      · simp only [ne_eq, HahnSeries.mem_support]
-        rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
-        simp only [↓reduceIte]
-        apply (LinearMap.map_eq_zero_iff _ (Archimedean.embedReal_injective _)).ne.mpr
-        simpa using hx'0
-      · intro g' hg
-        contrapose! hg
-        simp only [ne_eq, HahnSeries.mem_support, Decidable.not_not]
-        rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
-        simp only [ne_eq, ite_eq_right_iff]
-        intro hg'
-        obtain hg := Subtype.eq_iff.ne.mp hg.ne
-        simp only [ne_eq] at hg
-        rw [hg'] at hg
-        simp at hg
-    rw [this] at h
     apply HahnSeries.coeff_eq_zero_of_lt_orderTop
-    rw [h]
-    simp only [ne_eq, WithTop.coe_lt_coe, Subtype.mk_lt_mk]
-    rw [hmkeq]
-    exact hA
+    rw [SubEmbedding.orderTop_eq_class e hx hx0']
+    simpa using hA
 
 def SubEmbedding.nhds (e : SubEmbedding M) (x : M) (A : archimedeanClass M) : Set M :=
-  {y : M | y ∈ e.domain ∧ A < archimedeanClass.mk (x - y)}
+  {y : M | y ∈ e.f.domain ∧ A < archimedeanClass.mk (x - y)}
+
+theorem SubEmbedding.nhds_anti (e : SubEmbedding M) (x : M) : Antitone (nhds e x) := by
+  intro a b h
+  unfold nhds
+  simp only [Set.le_eq_subset, Set.setOf_subset_setOf, and_imp]
+  intro u hu hv
+  exact ⟨hu, lt_of_le_of_lt h hv⟩
 
 theorem SubEmbedding.map_eq (e : SubEmbedding M) (x : M) {A B1 B2 : archimedeanClass M}
-    (h1 : A < B1) (h2 : A < B2) {y1 y2 : M} (hy1 : y1 ∈ nhds e x B1) (hy2 : y2 ∈ nhds e x B2) :
-    (e.f ⟨y1, hy1.1⟩).coeff ⟨A, archimedeanClass.ne_zero_of_lt h1⟩ =
-    (e.f ⟨y2, hy2.1⟩).coeff ⟨A, archimedeanClass.ne_zero_of_lt h1⟩ := by
+    (hA : A ≠ 0)
+    (h1 : A ≤ B1) (h2 : A ≤ B2) {y1 y2 : M} (hy1 : y1 ∈ nhds e x B1) (hy2 : y2 ∈ nhds e x B2) :
+    (e.f ⟨y1, hy1.1⟩).coeff ⟨A, hA⟩ =
+    (e.f ⟨y2, hy2.1⟩).coeff ⟨A, hA⟩ := by
 
   apply eq_of_sub_eq_zero
-  rw [← Pi.sub_apply, ← HahnSeries.coeff_sub', ← map_sub]
+  rw [← Pi.sub_apply, ← HahnSeries.coeff_sub', ← LinearPMap.map_sub]
   apply SubEmbedding.coeff_zero_of_class_gt
   simp only
   have : y1 - y2 = (x - y2) + (-(x - y1)) := by abel
@@ -208,9 +263,9 @@ theorem SubEmbedding.map_eq (e : SubEmbedding M) (x : M) {A B1 B2 : archimedeanC
   rw [archimedeanClass.mk_neg]
   simp only [lt_inf_iff]
   constructor
-  · apply lt_trans h2
+  · apply lt_of_le_of_lt h2
     exact hy2.2
-  · apply lt_trans h1
+  · apply lt_of_le_of_lt h1
     exact hy1.2
 
 open Classical in
@@ -222,131 +277,288 @@ def SubEmbedding.eval (e : SubEmbedding M) (x : M) : {A : archimedeanClass M // 
     else
       0
 
-theorem SubEmbedding.eval_IsWF (e : SubEmbedding M) (x : M) :
+theorem SubEmbedding.eval_eq (e : SubEmbedding M) (x : M) {A B : archimedeanClass M}
+    (hA : A ≠ 0)
+    (hAB : A ≤ B) {y : M} (hy : y ∈ nhds e x B) :
+    eval e x ⟨A, hA⟩ =
+    (e.f ⟨y, hy.1⟩).coeff ⟨A, hA⟩ := by
+
+  have hnonempty : (nhds e x A).Nonempty := by
+    refine Set.Nonempty.mono ?_ (Set.nonempty_of_mem hy)
+    exact nhds_anti _ _ hAB
+
+  unfold eval
+  simp only [hnonempty, ↓reduceDIte]
+  symm
+  apply map_eq _ _ hA hAB (le_refl A) hy (Exists.choose_spec _)
+
+
+theorem SubEmbedding.eval_isWF_support (e : SubEmbedding M) (x : M) :
     (eval e x).support.IsWF := by
+  rw [Set.isWF_iff_no_descending_seq]
+  by_contra!
+  obtain ⟨seq, ⟨hanti, hmem⟩⟩ := this
+
+  have hnonempty : (nhds e x (seq 0).val).Nonempty := by
+    obtain hmem := hmem 0
+    contrapose hmem with hempty
+    simp only [ne_eq, Function.mem_support, Decidable.not_not]
+    unfold eval
+    simp [hempty]
+  obtain ⟨y, hy⟩ := hnonempty
+
+  have hmem' : ∀ n : ℕ , seq n ∈ Function.support ((e.f ⟨y, hy.1⟩).coeff) := by
+    intro n
+    obtain hmem := hmem n
+    simp only [Function.mem_support] at hmem ⊢
+    convert hmem using 1
+    symm
+    apply SubEmbedding.eval_eq e x _ (le_refl _)
+    apply Set.mem_of_mem_of_subset hy
+    apply SubEmbedding.nhds_anti
+    simp only [Subtype.coe_le_coe]
+    apply hanti.le_iff_le.mpr
+    simp
+
+  obtain hwf := (e.f ⟨y, hy.1⟩).isWF_support
+  contrapose! hwf
+  rw [Set.isWF_iff_no_descending_seq]
+  simp only [not_forall, ne_eq, Decidable.not_not, not_exists, exists_prop, Set.not_not_mem]
+  use seq
+  exact ⟨hanti, hmem'⟩
+
+noncomputable
+def SubEmbedding.eval_hahn (e : SubEmbedding M) (x : M) :
+    HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ where
+  coeff := SubEmbedding.eval e x
+  isPWO_support' := (eval_isWF_support e x).isPWO
+
+theorem SubEmbedding.eval_ne_of_not_mem (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain)
+    (z : e.f.domain) :
+    e.eval_hahn x ≠ e.f z := by
+
+  by_contra! h
+
+  have h1 (y : e.f.domain) (hxy : x ≠ y.val) : archimedeanClass.mk (x - y.val) ≤
+      archimedeanClass.mk (z.val - y.val) := by
+
+    have (A : {A : archimedeanClass M // A ≠ 0})
+      (hA : A.val < archimedeanClass.mk (x - y.val))  :
+      (e.eval_hahn x).coeff A = (e.f y).coeff A := by
+      apply SubEmbedding.eval_eq e x _ (le_refl _)
+      unfold nhds
+      simpa using hA
+
+    conv at this =>
+      intro A hA
+      rw [h]
+      rw [← sub_eq_zero]
+      rw [← HahnSeries.coeff_sub]
+      rw [← LinearPMap.map_sub]
+
+    have hxy' : archimedeanClass.mk (x - y.val) ≠ 0 := by
+      apply archimedeanClass.eq_zero_iff.ne.mpr
+      exact sub_ne_zero_of_ne hxy
+
+    have : WithTop.some (⟨archimedeanClass.mk (x - y.val), hxy'⟩ : {A : archimedeanClass M // A ≠ 0}) ≤
+        (e.f (z - y)).orderTop := by
+      contrapose! this
+      have hsome : (e.f (z - y)).orderTop ≠ ⊤ := LT.lt.ne_top this
+      rw [WithTop.ne_top_iff_exists] at hsome
+      obtain ⟨order, horder⟩ := hsome
+      use order
+      constructor
+      · rw [← horder] at this
+        simpa using this
+      · apply HahnSeries.coeff_orderTop_ne
+        exact horder.symm
+
+    by_cases hyz0 : archimedeanClass.mk (z - y).val = 0
+    · simp only [ne_eq, AddSubgroupClass.coe_sub] at hyz0
+      rw [hyz0]
+      apply archimedeanClass.nonpos
+    · rw [SubEmbedding.orderTop_eq_class e _ hyz0] at this
+      simpa using this
+
+  have h2 (y : e.f.domain) (hxy : x ≠ y.val) : archimedeanClass.mk (x - y.val) ≤
+      archimedeanClass.mk (x - z.val) := by
+    have : x - z.val = x - y.val + -(z.val - y.val) := by abel
+    rw [this]
+    refine le_trans ?_ (archimedeanClass.min_le_mk_add _ _)
+    rw [archimedeanClass.mk_neg]
+    simpa using h1 y hxy
+
+  have h3 (y : e.f.domain) : archimedeanClass.mk (x - y.val) ≤
+      archimedeanClass.mk (x - z.val) := by
+    apply h2
+    contrapose! hx
+    rw [hx]
+    simp
 
 
   sorry
 
+theorem SubEmbedding.eval_lt (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain)
+    (y : e.f.domain) (h : x < y.val) :
+    e.eval_hahn x < e.f y := by
+  unfold eval_hahn
+  rw [HahnSeries.lt_iff]
+  simp only
+
+  have h0 : archimedeanClass.mk (x - y.val) ≠ 0 :=
+    archimedeanClass.eq_zero_iff.ne.mpr <| sub_ne_zero_of_ne h.ne
+
+  use ⟨archimedeanClass.mk (x - y.val), h0⟩
+  constructor
+  · intro j hj
+    have hy : y.val ∈ e.nhds x j.val := by
+      unfold nhds
+      simpa using hj
+    rw [SubEmbedding.eval_eq e x j.prop (le_refl _) hy]
+  · have hnonempty : (e.nhds x (archimedeanClass.mk (x - y.val))).Nonempty := by sorry
+    obtain ⟨z, hz⟩ := hnonempty
+    rw [SubEmbedding.eval_eq e x h0 (le_refl _) hz]
+
+    unfold nhds at hz
+    simp only [Set.mem_setOf_eq] at hz
+
+    have hzyclass : archimedeanClass.mk (z - y.val) = archimedeanClass.mk (x - y.val) := by
+      symm
+      have : z - y.val = x - y.val + (z - x) := by abel
+      rw [this]
+      apply archimedeanClass.mk_eq_mk_self_add_of_mk_lt
+      rw [← archimedeanClass.mk_neg (z - x), neg_sub]
+      exact hz.2
+
+    have hzy0 : archimedeanClass.mk (z - y.val) ≠ 0 := hzyclass.symm ▸ h0
+
+    have hzy : ⟨z, hz.1⟩ < y := by
+      show z < y.val
+      apply (sub_lt_sub_iff_right x).mp
+      refine archimedeanClass.lt_of_mk_lt_mk ?_ (sub_nonneg_of_le h.le)
+      rw [← archimedeanClass.mk_neg (z - x), neg_sub]
+      rw [← archimedeanClass.mk_neg (y.val - x), neg_sub]
+      exact hz.2
+
+    have hzy := e.strictMono.lt_iff_lt.mpr hzy
+
+
+    rw [HahnSeries.lt_iff] at hzy
+    obtain ⟨i, hj, hi⟩ := hzy
+    have hieq : i = ⟨archimedeanClass.mk (x - y.val), h0⟩ := by
+      apply le_antisymm
+      · by_contra! hlt
+        obtain hj := hj ⟨archimedeanClass.mk (x - y.val), h0⟩ hlt
+        obtain hj := sub_eq_zero_of_eq hj
+        rw [← HahnSeries.coeff_sub, ← LinearPMap.map_sub] at hj
+        simp_rw [← hzyclass] at hj
+        contrapose! hj
+        apply SubEmbedding.coeff_nonzero_at_class
+      · contrapose! hi
+        apply le_of_eq
+        simp_rw [← hzyclass] at hi
+        apply eq_of_sub_eq_zero
+        rw [← HahnSeries.coeff_sub, ← LinearPMap.map_sub]
+        apply coeff_zero_of_class_gt
+        rw [← archimedeanClass.mk_neg, neg_sub]
+        exact hi
+    rw [hieq] at hi
+    exact hi
+
 noncomputable
-def SubEmbedding_ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.domain) : SubEmbedding M where
-  domain := e.domain ⊔ ℚ ∙ x
-  hdomain := by
-    intro A a ha
-    exact Submodule.mem_sup.mpr ⟨a, e.hdomain A a ha, 0, by simp⟩
+abbrev SubEmbedding.ext_fun (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) :
+    M →ₗ.[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ :=
+  LinearPMap.supSpanSingleton e.f x (SubEmbedding.eval_hahn e x) hx
 
-  f := by
-    let S := ((fun y ↦ archimedeanClass.mk (x - y)) '' e.domain) \ {0}
-    have hS : ∀ s ∈ S, ∃ s' ∈ S, s < s' := by
-      by_contra!
-      obtain ⟨sz, hszmem, hsz⟩ := this
-      obtain ⟨z, hzmem, hz⟩ := (Set.mem_image _ _ _).mp ((Set.mem_diff _).mp hszmem).1
-      have hxz0 : archimedeanClass.mk (x - z) ≠ 0 := by
-        contrapose! hx with h0
-        obtain h0' := archimedeanClass.eq_zero_iff.mp h0
-        have : x = z := sub_eq_zero.mp h0'
-        rw [this]
-        exact hzmem
 
-      obtain ⟨⟨v, xz'⟩, ⟨hv, hxz', hvxz⟩, _⟩  := archimedeanGrade.exists_add hxz0 (
-        show x - z ∈ archimedeanSubgroup.toSubmodule (UpperSet.Ici (archimedeanClass.mk (x - z))) by
-          rw [archimedeanSubgroup.mem_submodule_iff_mem]
-          rw [archimedeanSubgroup.mem_iff]
-          simp only [UpperSet.mem_Ici_iff, le_refl]
-          -- For some reason the following below didn't get simp
-          rw [UpperSet.carrier_eq_coe, UpperSet.coe_Ici]
-          apply Set.nonempty_Ici
-      )
-      rw [archimedeanSubgroup.mem_submodule_iff_mem, archimedeanSubgroup.mem_iff (
-        archimedeanClass.Ioi_nonempty hxz0)] at hv
+/-- TODO: generalize this-/
+instance (Γ : Type*) [LinearOrder Γ] : OrderedSMul ℚ (HahnSeries Γ ℝ) := OrderedSMul.mk' (by
+  intro a b c hab hc
+  apply le_of_lt
+  rw [HahnSeries.lt_iff] at ⊢ hab
+  obtain ⟨i, hj, hi⟩ := hab
+  use i
+  constructor
+  · intro j hji
+    obtain hj := hj j hji
+    rw [HahnSeries.coeff_smul, HahnSeries.coeff_smul]
+    rw [hj]
+  · rw [HahnSeries.coeff_smul, HahnSeries.coeff_smul]
+    exact smul_lt_smul_of_pos_left hi hc
 
-      simp at hv hxz' hvxz
-      have hxzmem : z + xz' ∈ e.domain := by
-        apply Submodule.add_mem
-        · exact hzmem
-        · exact e.hdomain _ _ hxz'
+)
 
-      by_cases hv0 : archimedeanClass.mk v = 0
-      · have hv0' : v = 0 := archimedeanClass.eq_zero_iff.mp hv0
-        rw [hv0'] at hvxz
-        simp only [zero_add] at hvxz
-        obtain hvxz' := sub_eq_iff_eq_add'.mp hvxz.symm
-        contrapose! hx
-        rw [hvxz']
-        exact hxzmem
-      · have : Nontrivial (archimedeanGrade (archimedeanClass.mk v)) := by
-          apply archimedeanGrade.nontrivial_of_nonzero
-          exact hv0
-        obtain ⟨⟨v', hvmem'⟩, hv'⟩ := exists_ne (0 : archimedeanGrade (archimedeanClass.mk v))
-        have hv0' : v' ≠ 0 := Subtype.eq_iff.ne.mp hv'
-        obtain hvmk' := archimedeanGrade.mem_class_of_nonzero hv0 hvmem' hv0'
-        have : archimedeanClass.mk v' ∈ S := by
-          unfold S
-          simp only [Set.mem_diff, Set.mem_image, SetLike.mem_coe, Set.mem_singleton_iff,
-            archimedeanClass.eq_zero_iff]
-          constructor
-          · use z + xz'
-            constructor
-            · exact hxzmem
-            · rw [hvmk']
-              congr 1
-              rw [← sub_sub]
-              rw [← hvxz]
-              simp
-          · exact hv0'
-        obtain hwhat := hsz _ this
-        rw [← hz, hvmk'] at hwhat
-        obtain hwhat' := hwhat.trans_lt hv
-        simp at hwhat'
+instance : OrderedSMul ℚ M := OrderedSMul.mk' (by
+  intro a b c hab hc
+  rw [DivisibleBy.rat_smul_eq, DivisibleBy.rat_smul_eq]
+  apply (nsmul_le_nsmul_iff_left' (show c.den ≠ 0 by simp)).mp
+  rw [DivisibleBy.div_cancel _ (by simp), DivisibleBy.div_cancel _ (by simp)]
+  apply zsmul_le_zsmul_right
+  · apply le_of_lt
+    exact Rat.num_pos.mpr hc
+  · exact hab.le
 
-    have : Nontrivial M := by
-      use x, 0
-      contrapose! hx
-      rw [hx]
+)
+
+theorem SubEmbedding.ext_fun_strictMono (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) :
+    StrictMono (ext_fun e hx) := by
+
+  intro z y hxy
+  apply lt_of_sub_pos
+  rw [← LinearPMap.map_sub]
+  obtain hxy := sub_pos.mpr hxy
+  obtain hxymem := (y - z).prop
+  nth_rw 1 [LinearPMap.domain_supSpanSingleton] at hxymem
+  obtain ⟨a, ha, b, hb, hab⟩ := Submodule.mem_sup.mp hxymem
+  have : y - z = ⟨a + b, hab.symm ▸ (y - z).prop⟩ := by simp_rw [hab]
+  rw [this] at ⊢ hxy
+
+  have habpos : 0 < a + b := by exact hxy
+
+  obtain ⟨c, hc⟩ := Submodule.mem_span_singleton.mp hb
+  simp_rw [← hc]
+  rw [← hc] at habpos
+  rw [LinearPMap.supSpanSingleton_apply_mk _ _ _ hx _ ha]
+
+  rw [← sub_neg_eq_add, ← neg_smul, sub_pos] at habpos ⊢
+  by_cases hc0 : c = 0
+  · rw [hc0] at habpos ⊢
+    simp only [zero_smul, ne_eq, neg_zero] at habpos ⊢
+    sorry
+  · have : a = (-c) • ((-c)⁻¹ • a) := by
+      rw [smul_smul]
+      rw [mul_inv_cancel₀ (neg_ne_zero.mpr hc0)]
       simp
+    rw [this] at habpos
+    have : e.f ⟨a, ha⟩ = (-c) • ((-c)⁻¹ • e.f ⟨a, ha⟩) := by
+      rw [smul_smul]
+      rw [mul_inv_cancel₀ (neg_ne_zero.mpr hc0)]
+      simp
+    rw [this, ← LinearPMap.map_smul]
 
-    have hSnonempty : S.Nonempty := by
-      obtain ⟨A, hA⟩ := exists_ne (0 : archimedeanClass M)
-      have : Nontrivial (archimedeanGrade A) := by
-        apply archimedeanGrade.nontrivial_of_nonzero
-        exact hA
-      obtain ⟨a, ha⟩ := exists_ne (0 : archimedeanGrade A)
-      use archimedeanClass.mk (x - a.val)
-      unfold S
-      simp only [Set.mem_diff, Set.mem_image, SetLike.mem_coe, Set.mem_singleton_iff,
-        archimedeanClass.eq_zero_iff]
-      constructor
-      · use a.val
-        constructor
-        · apply e.hdomain A
-          simp
-        · simp
-      · contrapose! hx
-        obtain hx' := sub_eq_zero.mp hx
-        rw [hx']
-        apply e.hdomain A
-        simp
+    have : (-c)⁻¹ • (⟨a, ha⟩ : e.f.domain) = ⟨(-c)⁻¹ • a,
+      Submodule.smul_mem e.f.domain (-c)⁻¹ ha⟩ := rfl
+    rw [this]
 
-    have hS' : ∀ s : S, ∃ s' : S, s < s' := by
-      intro ⟨s, hs⟩
-      obtain ⟨s', hs', hss⟩ := hS s hs
-      use ⟨s', hs'⟩
-      simpa using hss
+    obtain hcneg|hcpos := lt_or_gt_of_ne hc0
+    · have : 0 < -c := Left.neg_pos_iff.mpr hcneg
+      refine smul_lt_smul_of_pos_left ?_ this
+      obtain h := lt_of_smul_lt_smul_left habpos this.le
+      apply SubEmbedding.eval_lt e hx
+      exact h
+    · have : -c < 0 := neg_neg_iff_pos.mpr hcpos
+      refine smul_lt_smul_of_neg_left ?_ this
+      obtain h := lt_of_smul_lt_smul_of_nonpos habpos this.le
+      sorry
 
-    have hSnonempty' : Nonempty S := by
-      obtain ⟨s, hs⟩ := hSnonempty
-      use s
 
-    /-let rec R (n : ℕ) : S := match n with
-    | 0 => hSnonempty'.some
-    | n + 1 => (hS' (R n)).choose
-
-    have hRStrictMono : StrictMono R := by
-      apply strictMono_nat_of_lt_succ
-      intro n
-      convert (hS' (R n)).choose_spec-/
-
+noncomputable
+def SubEmbedding.ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubEmbedding M where
+  f := ext_fun e hx
+  hdomain := sorry
+  strictMono := ext_fun_strictMono e hx
+  anchor :=
 
     sorry
-  strictMono := sorry
-  anchor := sorry
+
+  range_cut := sorry

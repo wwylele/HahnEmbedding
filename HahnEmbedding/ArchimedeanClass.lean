@@ -254,6 +254,12 @@ theorem min_le_mk_mul (a b : M) : min (mk a) (mk b) ≤ mk (a * b) := by
     exact (mk_eq_mk_self_mul_of_mk_lt hab).le
 
 @[to_additive]
+theorem lt_of_mk_lt_mk {a b : M} (h : mk a < mk b) (hpos : 1 ≤ a) : b < a := by
+  obtain h := (mk_lt_mk).mp h 1
+  rw [pow_one, mabs_lt, mabs_eq_self.mpr hpos] at h
+  exact h.2
+
+@[to_additive]
 theorem Ioi_nonempty {A : mulArchimedeanClass M} (hA : A ≠ 1):
     (UpperSet.Ioi A).carrier.Nonempty := by
   use 1
