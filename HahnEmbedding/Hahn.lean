@@ -760,7 +760,68 @@ def SubEmbedding.ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubE
     unfold ext_fun at ha'
     rw [LinearPMap.supSpanSingleton_apply_mk e.f x _ hx b hbmem k] at ha'
     simp only [Set.mem_range]
+    rw [← ha']
 
+    rw [map_add]
 
-    --use (⟨b, hbmem⟩ : e.f.domain) + k • ??
-    sorry
+    -- ehh
+    have smul_change (s : HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ) : k • s = (k : ℝ) • s := by
+      exact rfl
+    rw [smul_change]
+    rw [map_smul]
+    rw [← smul_change]
+
+    by_cases hnonempty : (e.nhds x c.val).Nonempty
+    · obtain ⟨x', hx'⟩ := hnonempty
+
+      have heq' : (HahnSeries.cut { A // A ≠ 0 } ℝ c) (e.eval_hahn x)
+          = (HahnSeries.cut { A // A ≠ 0 } ℝ c) (e.f ⟨x', hx'.1⟩) := by
+        ext i
+        unfold eval_hahn HahnSeries.cut HahnSeries.cut_fun
+        simp only [ne_eq, LinearMap.coe_mk, AddHom.coe_mk]
+        split_ifs with hi
+        · simp
+        · apply eval_eq e x i.prop (show i.val ≤ c.val by apply le_of_lt; simpa using hi) hx'
+
+      rw [heq']
+
+      rw [smul_change]
+      rw [← map_smul]
+      rw [← smul_change]
+
+      rw [← map_add]
+      obtain h := e.range_cut (e.f ⟨b, hbmem⟩ + k • e.f ⟨x', hx'.1⟩) (by
+        simp only [Set.mem_range]
+        use ⟨b, hbmem⟩ + k • ⟨x', hx'.1⟩
+        rw [LinearPMap.map_add, LinearPMap.map_smul]
+        ) c
+      simp only [Set.mem_range] at h
+      obtain ⟨y, hy⟩ := h
+      use ⟨y.val, Submodule.mem_sup_left y.prop⟩
+      rw [LinearPMap.supSpanSingleton_apply_of_mem _ _ hx _  y.prop]
+      simpa using hy
+    · obtain ⟨b', hb'⟩ := e.range_cut (e.f ⟨b, hbmem⟩) (by simp) c
+
+      have heq : (HahnSeries.cut { A // A ≠ 0 } ℝ c) (e.eval_hahn x) = e.eval_hahn x := by
+        unfold HahnSeries.cut HahnSeries.cut_fun
+        ext i
+        simp only [ne_eq, LinearMap.coe_mk, AddHom.coe_mk, ite_eq_right_iff]
+        intro hci
+        have hempty : ¬ (e.nhds x i.val).Nonempty := by
+          contrapose! hnonempty
+          refine Set.Nonempty.mono ?_ hnonempty
+          apply nhds_anti
+          simpa using hci
+        unfold eval_hahn eval
+        simp [hempty]
+      rw [heq]
+      use ⟨b'.val + k • x, by
+        apply Submodule.add_mem
+        · apply Submodule.mem_sup_left
+          simp
+        · apply Submodule.smul_mem
+          apply Submodule.mem_sup_right
+          simp
+      ⟩
+      rw [LinearPMap.supSpanSingleton_apply_mk _ _ _ hx _ b'.prop]
+      simpa using hb'
