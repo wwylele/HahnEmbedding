@@ -395,8 +395,63 @@ theorem SubEmbedding.eval_ne_of_not_mem (e : SubEmbedding M) {x : M} (hx : x ∉
     rw [hx]
     simp
 
+  have hxz0 : archimedeanClass.mk (x - z.val) ≠ 0 := by
+    contrapose! hx with h0
+    obtain h0' := archimedeanClass.eq_zero_iff.mp h0
+    have : x = z.val := sub_eq_zero.mp h0'
+    rw [this]
+    simp
 
-  sorry
+  obtain ⟨⟨v, xz'⟩, ⟨hv, hxz', hvxz⟩, _⟩  := archimedeanGrade.exists_add hxz0 (
+    show x - z ∈ archimedeanSubgroup.toSubmodule (UpperSet.Ici (archimedeanClass.mk (x - z.val))) by
+      rw [archimedeanSubgroup.mem_submodule_iff_mem]
+      rw [archimedeanSubgroup.mem_iff]
+      simp only [UpperSet.mem_Ici_iff, le_refl]
+      -- For some reason the following below didn't get simp
+      rw [UpperSet.carrier_eq_coe, UpperSet.coe_Ici]
+      apply Set.nonempty_Ici
+  )
+
+  rw [archimedeanSubgroup.mem_submodule_iff_mem, archimedeanSubgroup.mem_iff (
+    archimedeanClass.Ioi_nonempty hxz0)] at hv
+
+  simp only [UpperSet.mem_Ioi_iff] at hv hxz'
+  simp only at hvxz
+
+  have hxzmem : z.val + xz' ∈ e.f.domain := by
+    apply Submodule.add_mem
+    · simp
+    · exact e.hdomain _ _ hxz'
+
+  by_cases hv0 : archimedeanClass.mk v = 0
+  · have hv0' : v = 0 := archimedeanClass.eq_zero_iff.mp hv0
+    rw [hv0'] at hvxz
+    simp only [zero_add] at hvxz
+    obtain hvxz' := sub_eq_iff_eq_add'.mp hvxz.symm
+    contrapose! hx
+    rw [hvxz']
+    exact hxzmem
+  · have : Nontrivial (archimedeanGrade (archimedeanClass.mk v)) := by
+      apply archimedeanGrade.nontrivial_of_nonzero
+      exact hv0
+    obtain ⟨⟨v', hvmem'⟩, hv'⟩ := exists_ne (0 : archimedeanGrade (archimedeanClass.mk v))
+    have hv0' : v' ≠ 0 := Subtype.eq_iff.ne.mp hv'
+    obtain hvmk' := archimedeanGrade.mem_class_of_nonzero hv0 hvmem' hv0'
+    have : ∃ y ∈ e.f.domain, archimedeanClass.mk (x - y) = archimedeanClass.mk v'  := by
+      use z.val + xz'
+      constructor
+      · exact hxzmem
+      · rw [hvmk']
+        congr 1
+        rw [← sub_sub]
+        rw [← hvxz]
+        simp
+    obtain ⟨y, hymem, hy⟩ := this
+    obtain hwhat := h3 ⟨y, hymem⟩
+    rw [hy] at hwhat
+    rw [hvmk'] at hwhat
+    obtain hwhat' := hwhat.trans_lt hv
+    simp at hwhat'
 
 theorem SubEmbedding.eval_lt (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain)
     (y : e.f.domain) (h : x < y.val) :
