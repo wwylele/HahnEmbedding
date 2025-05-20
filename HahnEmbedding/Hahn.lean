@@ -103,6 +103,98 @@ instance HahnSeries.instOrderedAddMonoid (Γ : Type*) (R : Type*)
       use i
       aesop
 
+theorem HahnSeries.leadingCoeff_eq_coeff {Γ : Type*} {R : Type*}
+    [PartialOrder Γ] [Zero R]
+    (x : HahnSeries Γ R) (hx : x.orderTop ≠ ⊤) : x.leadingCoeff = x.coeff (x.orderTop.untop hx) := by
+  have hx : x ≠ 0 := ne_zero_iff_orderTop.mpr hx
+  rw [HahnSeries.leadingCoeff_of_ne hx]
+  rw [(WithTop.untop_eq_iff _).mpr (HahnSeries.orderTop_of_ne hx)]
+
+theorem HahnSeries.leadingCoeff_neg {Γ : Type*} {R : Type*} [PartialOrder Γ] [AddGroup R]
+    (x : HahnSeries Γ R) : (-x).leadingCoeff = -x.leadingCoeff := by
+  by_cases hx : x = 0
+  · rw [hx]
+    simp
+  · have hnx : -x ≠ 0 := neg_ne_zero.mpr hx
+    have hx' : x.orderTop ≠ ⊤ := ne_zero_iff_orderTop.mp hx
+    have hnx' : (-x).orderTop ≠ ⊤ := ne_zero_iff_orderTop.mp hnx
+    rw [HahnSeries.leadingCoeff_eq_coeff x hx']
+    rw [HahnSeries.leadingCoeff_eq_coeff (-x) hnx']
+    rw [HahnSeries.coeff_neg]
+    simp_rw [HahnSeries.orderTop_neg]
+
+theorem HahnSeries.leadingCoeff_pos_iff {Γ : Type*} {R : Type*}
+    [LinearOrder Γ] [LinearOrder R] [AddCommGroup R] [IsOrderedAddMonoid R]
+    (x : HahnSeries Γ R) : 0 < x.leadingCoeff ↔ 0 < x := by
+  rw [HahnSeries.lt_iff]
+  constructor
+  · intro hpos
+    have htop : x.orderTop ≠ ⊤ := by
+      refine ne_zero_iff_orderTop.mp ?_
+      refine leadingCoeff_ne_iff.mp ?_
+      exact hpos.ne.symm
+    use x.orderTop.untop htop
+    constructor
+    · intro j hj
+      simp only [coeff_zero]
+      refine (coeff_eq_zero_of_lt_orderTop ?_).symm
+      exact (WithTop.lt_untop_iff htop).mp hj
+    · rw [← HahnSeries.leadingCoeff_eq_coeff]
+      simpa using hpos
+  · intro h
+    obtain ⟨i, hj, hi⟩ := h
+    simp only [coeff_zero] at hi
+    have horder : x.orderTop = WithTop.some i := by
+      apply HahnSeries.orderTop_eq_of_le
+      · simpa using hi.ne.symm
+      · intro g hg
+        contrapose! hg
+        simpa using (hj g hg).symm
+    have htop : x.orderTop ≠ ⊤ := WithTop.ne_top_iff_exists.mpr ⟨i, horder.symm⟩
+    have horder' : x.orderTop.untop htop  = i :=
+      (WithTop.untop_eq_iff _).mpr horder
+
+    rw [HahnSeries.leadingCoeff_eq_coeff _ htop]
+    rw [horder']
+    exact hi
+
+theorem HahnSeries.leadingCoeff_neg_iff {Γ : Type*} {R : Type*}
+    [LinearOrder Γ] [LinearOrder R] [AddCommGroup R] [IsOrderedAddMonoid R]
+    (x : HahnSeries Γ R) : x.leadingCoeff < 0 ↔ x < 0 := by
+  constructor
+  · intro h
+    contrapose! h
+    obtain heq|hlt := eq_or_lt_of_le h
+    · rw [← heq]
+      simp
+    · exact ((HahnSeries.leadingCoeff_pos_iff _).mpr hlt).le
+  · intro h
+    contrapose! h
+    obtain heq|hlt := eq_or_lt_of_le h
+    · exact (HahnSeries.leadingCoeff_eq_iff.mp heq.symm).symm.le
+    · exact ((HahnSeries.leadingCoeff_pos_iff _).mp hlt).le
+
+
+theorem HahnSeries.abs_order {Γ : Type*} {R : Type*}
+    [LinearOrder Γ] [LinearOrder R] [AddCommGroup R] [IsOrderedAddMonoid R]
+    (x : HahnSeries Γ R) : |x|.orderTop = x.orderTop := by
+  obtain hle|hge := le_total x 0
+  · rw [abs_eq_neg_self.mpr hle]
+    rw [HahnSeries.orderTop_neg]
+  · rw [abs_eq_self.mpr hge]
+
+theorem HahnSeries.abs_leadingCoeff {Γ : Type*} {R : Type*}
+    [LinearOrder Γ] [LinearOrder R] [AddCommGroup R] [IsOrderedAddMonoid R]
+    (x : HahnSeries Γ R) : |x|.leadingCoeff = |x.leadingCoeff| := by
+  obtain hlt|heq|hgt := lt_trichotomy x 0
+  · obtain hlt' := (HahnSeries.leadingCoeff_neg_iff _).mpr hlt
+    rw [abs_eq_neg_self.mpr hlt.le, abs_eq_neg_self.mpr hlt'.le]
+    rw [HahnSeries.leadingCoeff_neg]
+  · rw [heq]
+    simp
+  · obtain hgt' := (HahnSeries.leadingCoeff_pos_iff _).mpr hgt
+    rw [abs_eq_self.mpr hgt.le, abs_eq_self.mpr hgt'.le]
+
 
 theorem HahnSeries.archimedeanClass_eq_iff {Γ : Type*} {R : Type*}
     [LinearOrder Γ] [LinearOrder R] [AddCommGroup R] [IsOrderedAddMonoid R]
@@ -126,17 +218,127 @@ theorem HahnSeries.archimedeanClass_eq_iff {Γ : Type*} {R : Type*}
       nth_rw 2 [eq_comm]
       rw [archimedeanClass.eq_zero_iff]
       exact Iff.symm orderTop_eq_top_iff
-    · have hy0 : y ≠ 0 := by exact ne_zero_iff_orderTop.mpr hyt
-      have hx0 : x ≠ 0 := by exact ne_zero_iff_orderTop.mpr hxt
+    · have hy0 : y ≠ 0 := ne_zero_iff_orderTop.mpr hyt
+      have hx0 : x ≠ 0 := ne_zero_iff_orderTop.mpr hxt
       rw [archimedeanClass.eq]
       constructor
       · intro ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩
         by_contra!
         obtain hxy|hxy := lt_or_gt_of_ne this
-        · sorry
-        · sorry
-      · sorry
-
+        · contrapose! hm
+          use x.orderTop.untop (HahnSeries.ne_zero_iff_orderTop.mp hx0)
+          constructor
+          · simp only [coeff_nsmul, Pi.toLex_apply, Pi.smul_apply]
+            intro j hj
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              refine lt_trans ?_ hxy
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            simp
+          · simp only [ne_eq, coeff_nsmul, Pi.toLex_apply, Pi.smul_apply]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              simpa using hxy
+            )]
+            conv in x.orderTop =>
+              rw [← HahnSeries.abs_order]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            simp only [smul_zero]
+            rw [HahnSeries.leadingCoeff_pos_iff]
+            simpa using hx0
+        · contrapose! hn
+          use y.orderTop.untop (HahnSeries.ne_zero_iff_orderTop.mp hy0)
+          constructor
+          · simp only [coeff_nsmul, Pi.toLex_apply, Pi.smul_apply]
+            intro j hj
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              refine lt_trans ?_ hxy
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            simp
+          · simp only [ne_eq, coeff_nsmul, Pi.toLex_apply, Pi.smul_apply]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              simpa using hxy
+            )]
+            conv in y.orderTop =>
+              rw [← HahnSeries.abs_order]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            simp only [smul_zero]
+            rw [HahnSeries.leadingCoeff_pos_iff]
+            simpa using hy0
+      · intro horder
+        have hxc0 : x.leadingCoeff ≠ 0 := leadingCoeff_ne_iff.mpr hx0
+        have hyc0 : y.leadingCoeff ≠ 0 := leadingCoeff_ne_iff.mpr hy0
+        obtain ⟨m, hm⟩ := Archimedean.arch |x.leadingCoeff| (show 0 < |y.leadingCoeff| by exact abs_pos.mpr hyc0)
+        obtain ⟨n, hn⟩ := Archimedean.arch |y.leadingCoeff| (show 0 < |x.leadingCoeff| by exact abs_pos.mpr hxc0)
+        refine ⟨⟨m + 1, by simp, ?_⟩, ⟨n + 1, by simp, ?_⟩⟩
+        · apply le_of_lt
+          use x.orderTop.untop (HahnSeries.ne_zero_iff_orderTop.mp hx0)
+          constructor
+          · simp only [Pi.toLex_apply, coeff_nsmul, Pi.smul_apply]
+            intro j hj
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              rw [← horder]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            simp
+          · simp only [ne_eq, Pi.toLex_apply, coeff_nsmul, Pi.smul_apply]
+            conv in x.orderTop =>
+              rw [← HahnSeries.abs_order]
+            conv in x.orderTop =>
+              rw [horder, ← HahnSeries.abs_order]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            rw [HahnSeries.abs_leadingCoeff]
+            rw [HahnSeries.abs_leadingCoeff]
+            apply lt_of_le_of_lt hm
+            rw [add_smul, one_smul]
+            simp only [lt_add_iff_pos_right, abs_pos]
+            exact HahnSeries.leadingCoeff_ne_iff.mpr hy0
+        · apply le_of_lt
+          use y.orderTop.untop (HahnSeries.ne_zero_iff_orderTop.mp hy0)
+          constructor
+          · simp only [Pi.toLex_apply, coeff_nsmul, Pi.smul_apply]
+            intro j hj
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            rw [HahnSeries.coeff_eq_zero_of_lt_orderTop (by
+              rw [HahnSeries.abs_order]
+              rw [horder]
+              exact (WithTop.lt_untop_iff _).mp hj
+            )]
+            simp
+          · simp only [ne_eq, Pi.toLex_apply, coeff_nsmul, Pi.smul_apply]
+            conv in y.orderTop =>
+              rw [← HahnSeries.abs_order]
+            conv in y.orderTop =>
+              rw [← horder, ← HahnSeries.abs_order]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            rw [← HahnSeries.leadingCoeff_eq_coeff]
+            rw [HahnSeries.abs_leadingCoeff]
+            rw [HahnSeries.abs_leadingCoeff]
+            apply lt_of_le_of_lt hn
+            rw [add_smul, one_smul]
+            simp only [lt_add_iff_pos_right, abs_pos]
+            exact HahnSeries.leadingCoeff_ne_iff.mpr hx0
 
 
 
@@ -144,11 +346,13 @@ variable {M: Type*}
 variable [AddCommGroup M] [LinearOrder M] [IsOrderedAddMonoid M] [DivisibleBy M ℕ]
 
 variable (M) in
+@[ext]
 structure SubEmbedding where
   f : M →ₗ.[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ
-  hdomain : ∀ A : archimedeanClass M, ∀ a ∈ archimedeanGrade A, a ∈ f.domain
 
   strictMono : StrictMono f
+
+  hdomain : ∀ A : archimedeanClass M, ∀ a ∈ archimedeanGrade A, a ∈ f.domain
   anchor : ∀ A : archimedeanClass M, ∀ a : M, (ha : a ∈ archimedeanGrade A) →
     (f ⟨a, hdomain A a ha⟩).coeff =
     fun i ↦ if i.val = A then archimedeanGrade.embedReal_linear A ⟨a, ha⟩ else 0
@@ -740,13 +944,18 @@ theorem SubEmbedding.ext_fun_strictMono (e : SubEmbedding M) {x : M} (hx : x ∉
 
 
 noncomputable
-def SubEmbedding.ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubEmbedding M where
+def SubEmbedding.extend (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubEmbedding M where
   f := ext_fun e hx
-  hdomain := sorry
   strictMono := ext_fun_strictMono e hx
-  anchor :=
 
-    sorry
+  hdomain := by
+    intro A a ha
+    apply Submodule.mem_sup_left
+    exact e.hdomain A a ha
+  anchor := by
+    intro A a ha
+    rw [LinearPMap.supSpanSingleton_apply_mk_of_mem _ _ hx (e.hdomain A a ha)]
+    exact e.anchor A a ha
 
   range_cut := by
     intro a ha c
@@ -825,3 +1034,59 @@ def SubEmbedding.ext (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : SubE
       ⟩
       rw [LinearPMap.supSpanSingleton_apply_mk _ _ _ hx _ b'.prop]
       simpa using hb'
+
+
+variable (M) in
+noncomputable
+instance SubEmbedding.le : PartialOrder (SubEmbedding M) := {
+  (PartialOrder.lift (fun e ↦ e.f) (by
+    intro a b h
+    ext1
+    exact h
+  )) with
+/-
+  inf (a b) := {
+    f := a.f ⊓ b.f
+    strictMono := sorry
+    hdomain := sorry
+    anchor := sorry
+    range_cut := sorry
+  }
+  inf_le_left := by
+    intro a b
+    apply inf_le_left (a := a.f) (b := b.f)
+  inf_le_right := by
+    intro a b
+    apply inf_le_right (a := a.f) (b := b.f)
+  le_inf := by
+    intro a b c hab hbc
+    apply le_inf (a := a.f) (b := b.f) (c := c.f) hab hbc-/
+}
+
+variable (M) in
+instance SubEmbedding.nonempty : Nonempty (SubEmbedding M) := sorry
+
+variable (M) in
+theorem SubEmbedding.exists_maximal :
+    ∃ (e : SubEmbedding M), IsMax e := by
+  apply zorn_le_nonempty
+  intro s hchain hnonempty
+
+  have hdir : DirectedOn (· ≤ ·) ((fun e ↦ e.f) '' s) := by
+    refine IsChain.directedOn ?_
+    intro a ha b hb hab
+    obtain ⟨a', ha'mem, ha'⟩ := (Set.mem_image _ _ _).mp ha
+    obtain ⟨b', hb'mem, hb'⟩ := (Set.mem_image _ _ _).mp hb
+    rw [← ha', ← hb'] at ⊢ hab
+    apply hchain ha'mem hb'mem
+    contrapose! hab
+    rw [hab]
+  use {
+    f := LinearPMap.sSup ((fun e ↦ e.f) '' s) hdir
+    strictMono := sorry
+    hdomain := sorry
+    anchor := sorry
+    range_cut := sorry
+  }
+  intro t ht
+  apply LinearPMap.le_sSup hdir (by use t)
