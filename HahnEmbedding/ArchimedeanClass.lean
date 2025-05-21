@@ -350,5 +350,35 @@ theorem map_mk_le {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomCl
   apply OrderHomClass.monotone
   exact h
 
+@[to_additive]
+theorem orderHom_injective {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    {f : F} (h : Function.Injective f) : Function.Injective (mulArchimedeanClass.orderHom f) := by
+  intro a b
+  nth_rw 2 [← mulArchimedeanClass.out_eq a]
+  nth_rw 2 [← mulArchimedeanClass.out_eq b]
+  unfold orderHom orderHomFun
+  simp only [OrderHom.coe_mk]
+  rw [mulArchimedeanClass.eq, mulArchimedeanClass.eq]
+  simp_rw [← map_mabs, ← map_pow]
+  intro h
+  obtain ⟨⟨m, hm0, hm⟩, ⟨n, hn0, hn⟩⟩ := h
+  refine ⟨⟨m, hm0, ?_⟩, ⟨n, hn0, ?_⟩⟩
+  · contrapose! hm
+    apply lt_of_le_of_ne
+    · apply OrderHomClass.monotone f hm.le
+    · contrapose! hm
+      exact (h hm).symm.le
+  · contrapose! hn
+    apply lt_of_le_of_ne
+    · apply OrderHomClass.monotone f hn.le
+    · contrapose! hn
+      exact (h hn).symm.le
+
+@[to_additive (attr := simp)]
+theorem orderHom_one {F : Type*} [FunLike F M N] [OrderHomClass F M N] [MonoidHomClass F M N]
+    (f : F) : (mulArchimedeanClass.orderHom f) (1 : mulArchimedeanClass M) = (1 : mulArchimedeanClass N) := by
+  rw [← mk_one, ← mk_one]
+  rw [← map_mk]
+  simp
 
 end mulArchimedeanClass

@@ -340,6 +340,42 @@ theorem HahnSeries.archimedeanClass_eq_iff {Γ : Type*} {R : Type*}
             simp only [lt_add_iff_pos_right, abs_pos]
             exact HahnSeries.leadingCoeff_ne_iff.mpr hx0
 
+noncomputable
+def HahnSeries.embDomainAddMonoidHom {Γ : Type*} {Γ' : Type*} {R : Type*}
+    [LinearOrder Γ] [AddMonoid R] [PartialOrder R] [LinearOrder Γ'] (f : Γ ↪o Γ') :
+    HahnSeries Γ R →+o HahnSeries Γ' R where
+  toFun := HahnSeries.embDomain f
+  map_zero' := by
+    apply HahnSeries.embDomain_zero
+  map_add' := by
+    intro a b
+    apply HahnSeries.embDomain_add
+  monotone' := by
+    intro a b h
+    obtain hlt|heq := lt_or_eq_of_le h
+    · apply le_of_lt
+      rw [HahnSeries.lt_iff] at hlt ⊢
+      obtain ⟨i, hj, hi⟩ := hlt
+      use f i
+      constructor
+      · intro j hji
+        by_cases hjmem : j ∈ Set.range f
+        · obtain ⟨j', hj'⟩ := hjmem
+          rw [← hj'] at ⊢ hji
+          simp only [embDomain_coeff]
+          apply hj
+          exact (OrderEmbedding.lt_iff_lt f).mp hji
+        · rw [HahnSeries.embDomain_notin_range hjmem, HahnSeries.embDomain_notin_range hjmem]
+      · simpa using hi
+    · rw [heq]
+
+theorem HahnSeries.embDomainAddMonoidHom_injective {Γ : Type*} {Γ' : Type*} {R : Type*}
+    [LinearOrder Γ] [AddMonoid R] [PartialOrder R] [LinearOrder Γ'] (f : Γ ↪o Γ') :
+    Function.Injective (HahnSeries.embDomainAddMonoidHom f (R := R)) := by
+  apply HahnSeries.embDomain_injective
+
+
+notation:50 " a⁰[" l:50 "] " => {A : archimedeanClass l // A ≠ 0}
 
 
 variable {M: Type*}
@@ -348,7 +384,7 @@ variable [AddCommGroup M] [LinearOrder M] [IsOrderedAddMonoid M] [DivisibleBy M 
 variable (M) in
 @[ext]
 structure SubEmbedding where
-  f : M →ₗ.[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ
+  f : M →ₗ.[ℚ] HahnSeries (a⁰[M]) ℝ
 
   strictMono : StrictMono f
 
@@ -357,12 +393,12 @@ structure SubEmbedding where
     (f ⟨a, hdomain A a ha⟩).coeff =
     fun i ↦ if i.val = A then archimedeanGrade.embedReal_linear A ⟨a, ha⟩ else 0
 
-  range_cut : ∀ x ∈ Set.range f, ∀ c : {A : archimedeanClass M // A ≠ 0},
+  range_cut : ∀ x ∈ Set.range f, ∀ c : (a⁰[M]),
     (HahnSeries.cut _ _ c) x ∈ Set.range f
 
 noncomputable
 def SubEmbedding.to_orderAddMonoidHom (e : SubEmbedding M) :
-    e.f.domain →+o HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ where
+    e.f.domain →+o HahnSeries (a⁰[M]) ℝ where
   toFun := e.f
   map_zero' := by simp
   map_add' := by
@@ -474,7 +510,7 @@ theorem SubEmbedding.map_eq (e : SubEmbedding M) (x : M) {A B1 B2 : archimedeanC
 
 open Classical in
 noncomputable
-def SubEmbedding.eval (e : SubEmbedding M) (x : M) : {A : archimedeanClass M // A ≠ 0} → ℝ :=
+def SubEmbedding.eval (e : SubEmbedding M) (x : M) : (a⁰[M]) → ℝ :=
   fun A ↦
     if h : (SubEmbedding.nhds e x A).Nonempty then
       (e.f ⟨h.choose, h.choose_spec.1⟩).coeff A
@@ -533,7 +569,7 @@ theorem SubEmbedding.eval_isWF_support (e : SubEmbedding M) (x : M) :
 
 noncomputable
 def SubEmbedding.eval_hahn (e : SubEmbedding M) (x : M) :
-    HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ where
+    HahnSeries (a⁰[M]) ℝ where
   coeff := SubEmbedding.eval e x
   isPWO_support' := (eval_isWF_support e x).isPWO
 
@@ -546,7 +582,7 @@ theorem SubEmbedding.eval_ne_of_not_mem (e : SubEmbedding M) {x : M} (hx : x ∉
   have h1 (y : e.f.domain) (hxy : x ≠ y.val) : archimedeanClass.mk (x - y.val) ≤
       archimedeanClass.mk (z.val - y.val) := by
 
-    have (A : {A : archimedeanClass M // A ≠ 0})
+    have (A : (a⁰[M]))
       (hA : A.val < archimedeanClass.mk (x - y.val))  :
       (e.eval_hahn x).coeff A = (e.f y).coeff A := by
       apply SubEmbedding.eval_eq e x _ (le_refl _)
@@ -564,7 +600,7 @@ theorem SubEmbedding.eval_ne_of_not_mem (e : SubEmbedding M) {x : M} (hx : x ∉
       apply archimedeanClass.eq_zero_iff.ne.mpr
       exact sub_ne_zero_of_ne hxy
 
-    have : WithTop.some (⟨archimedeanClass.mk (x - y.val), hxy'⟩ : {A : archimedeanClass M // A ≠ 0}) ≤
+    have : WithTop.some (⟨archimedeanClass.mk (x - y.val), hxy'⟩ : (a⁰[M])) ≤
         (e.f (z - y)).orderTop := by
       contrapose! this
       have hsome : (e.f (z - y)).orderTop ≠ ⊤ := LT.lt.ne_top this
@@ -854,7 +890,7 @@ theorem SubEmbedding.lt_eval (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain
 
 noncomputable
 abbrev SubEmbedding.ext_fun (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) :
-    M →ₗ.[ℚ] HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ :=
+    M →ₗ.[ℚ] HahnSeries (a⁰[M]) ℝ :=
   LinearPMap.supSpanSingleton e.f x (SubEmbedding.eval_hahn e x) hx
 
 
@@ -974,7 +1010,7 @@ def SubEmbedding.extend (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : S
     rw [map_add]
 
     -- ehh
-    have smul_change (s : HahnSeries {A : archimedeanClass M // A ≠ 0} ℝ) : k • s = (k : ℝ) • s := by
+    have smul_change (s : HahnSeries (a⁰[M]) ℝ) : k • s = (k : ℝ) • s := by
       exact rfl
     rw [smul_change]
     rw [map_smul]
@@ -1044,27 +1080,56 @@ instance SubEmbedding.le : PartialOrder (SubEmbedding M) := {
     ext1
     exact h
   )) with
-/-
-  inf (a b) := {
-    f := a.f ⊓ b.f
-    strictMono := sorry
-    hdomain := sorry
-    anchor := sorry
-    range_cut := sorry
-  }
-  inf_le_left := by
-    intro a b
-    apply inf_le_left (a := a.f) (b := b.f)
-  inf_le_right := by
-    intro a b
-    apply inf_le_right (a := a.f) (b := b.f)
-  le_inf := by
-    intro a b c hab hbc
-    apply le_inf (a := a.f) (b := b.f) (c := c.f) hab hbc-/
 }
 
+noncomputable
+def principal_embed (A : (a⁰[M])) :
+  M →ₗ.[ℚ] HahnSeries (a⁰[M]) ℝ where
+  domain := archimedeanGrade A
+  toFun := (HahnSeries.single.linearMap A).comp (archimedeanGrade.embedReal_linear A.val)
+/-
+theorem principal_decomp (x : ((⨆ A : (a⁰[M]), archimedeanGrade A.val) : Submodule ℚ M)) :
+    ∃ (f : Π₀ (A : (a⁰[M])), archimedeanGrade A.val),
+      ((DFinsupp.lsum ℕ) fun (A : (a⁰[M])) ↦ (archimedeanGrade A.val).subtype) f = x.val :=
+
+  (Submodule.mem_iSup_iff_exists_dfinsupp _ _).mp x.prop
+
 variable (M) in
-instance SubEmbedding.nonempty : Nonempty (SubEmbedding M) := sorry
+noncomputable
+def principal_decomp_linear :
+    ((⨆ A : (a⁰[M]), archimedeanGrade A.val) : Submodule ℚ M) →ₗ[ℚ]
+    Π₀ (A : (a⁰[M])), ↥(archimedeanGrade A.val) :=
+  sorry
+  --LinearMap.inverse
+
+noncomputable
+def principal_embed (A : (a⁰[M])) : ((archimedeanGrade A) : Submodule ℚ M) →ₗ[ℚ] HahnSeries (a⁰[M]) ℝ :=
+    (HahnSeries.single.linearMap A).comp (archimedeanGrade.embedReal_linear A.val)
+
+--noncomputable
+--def principal_embed' (A : (a⁰[M])) :-/
+
+
+variable (M) in
+noncomputable
+def SubEmbedding.principle : SubEmbedding M where
+  f := {
+    domain := ⨆ A : (a⁰[M]), archimedeanGrade A.val
+    toFun := sorry
+  }
+
+  strictMono := sorry
+
+  hdomain := sorry
+
+  anchor := sorry
+
+  range_cut := sorry
+
+
+variable (M) in
+instance SubEmbedding.nonempty : Nonempty (SubEmbedding M) :=
+  Nonempty.intro (SubEmbedding.principle M)
 
 variable (M) in
 theorem SubEmbedding.exists_maximal :
@@ -1072,21 +1137,164 @@ theorem SubEmbedding.exists_maximal :
   apply zorn_le_nonempty
   intro s hchain hnonempty
 
-  have hdir : DirectedOn (· ≤ ·) ((fun e ↦ e.f) '' s) := by
-    refine IsChain.directedOn ?_
-    intro a ha b hb hab
-    obtain ⟨a', ha'mem, ha'⟩ := (Set.mem_image _ _ _).mp ha
-    obtain ⟨b', hb'mem, hb'⟩ := (Set.mem_image _ _ _).mp hb
-    rw [← ha', ← hb'] at ⊢ hab
-    apply hchain ha'mem hb'mem
-    contrapose! hab
-    rw [hab]
+  have hchain' : IsChain (· ≤ ·) ((fun e ↦ e.f) '' s) := by
+    refine IsChain.image _ _ _ ?_ hchain
+    intro x y hxy
+    exact hxy
+
+  have hchain'' : IsChain (· ≤ ·) (LinearPMap.domain '' ((fun e ↦ e.f) '' s)) := by
+    refine IsChain.image _ _ _ ?_ hchain'
+    intro x y hxy
+    exact hxy.1
+
   use {
-    f := LinearPMap.sSup ((fun e ↦ e.f) '' s) hdir
-    strictMono := sorry
-    hdomain := sorry
-    anchor := sorry
-    range_cut := sorry
+    f := LinearPMap.sSup ((fun e ↦ e.f) '' s) hchain'.directedOn
+    strictMono := by
+      intro ⟨a, ha⟩ ⟨b, hb⟩ hab
+      unfold LinearPMap.sSup at ha hb
+      simp only at ha hb
+      rw [Submodule.mem_sSup_of_directed ((hnonempty.image _).image _)
+        hchain''.directedOn] at ha hb
+      obtain ⟨a', ha'mem, ha'⟩ := ha
+      obtain ⟨b', hb'mem, hb'⟩ := hb
+      simp only [ne_eq, Set.mem_image, exists_exists_and_eq_and] at ha'mem hb'mem
+      obtain ⟨a'', ha''mem, ha''⟩ := ha'mem
+      obtain ⟨b'', hb''mem, hb''⟩ := hb'mem
+      rw [← ha''] at ha'
+      rw [← hb''] at hb'
+
+      rw [LinearPMap.sSup_apply hchain'.directedOn (by use a'') ⟨a, ha'⟩]
+      rw [LinearPMap.sSup_apply hchain'.directedOn (by use b'') ⟨b, hb'⟩]
+      obtain hle|hle := hchain.total ha''mem hb''mem
+      · have hle' : a''.f.domain ≤ b''.f.domain := hle.1
+        have heq : a''.f ⟨a, ha'⟩ = b''.f ⟨a, Set.mem_of_mem_of_subset ha' hle'⟩ := by
+          apply hle.2
+          simp
+        rw [heq]
+        apply b''.strictMono
+        simpa using hab
+      · have hle' : b''.f.domain ≤ a''.f.domain := hle.1
+        have heq : b''.f ⟨b, hb'⟩ = a''.f ⟨b, Set.mem_of_mem_of_subset hb' hle'⟩ := by
+          apply hle.2
+          simp
+        rw [heq]
+        apply a''.strictMono
+        simpa using hab
+
+    hdomain := by
+      obtain ⟨e, he⟩ := hnonempty
+      have he' : e.f.domain ∈ (·.domain) '' ((·.f) '' s) := by
+        simp only [ne_eq, Set.mem_image, exists_exists_and_eq_and]
+        use e
+      intro A a ha
+      unfold LinearPMap.sSup
+      simp only
+      apply Submodule.mem_sSup_of_mem he'
+      exact e.hdomain A a ha
+
+    anchor := by
+      obtain ⟨e, he⟩ := hnonempty
+      have he' : e.f ∈ (·.f) '' s := by use e
+      intro A a ha
+      rw [LinearPMap.sSup_apply hchain'.directedOn he' ⟨a, e.hdomain A a ha⟩ ]
+      exact e.anchor A a ha
+
+    range_cut := by
+      intro a ha c
+      simp only [Set.mem_range] at ha
+      obtain ⟨⟨a', ha'mem⟩, ha'⟩ := ha
+      unfold LinearPMap.sSup at ha'mem
+      simp only [ne_eq] at ha'mem
+      rw [Submodule.mem_sSup_of_directed ((hnonempty.image _).image _)
+        hchain''.directedOn] at ha'mem
+      obtain ⟨a'', ha''mem, ha''⟩ := ha'mem
+      simp only [Set.mem_image, exists_exists_and_eq_and] at ha''mem
+      obtain ⟨e, hemem, he⟩ := ha''mem
+      have he' : e.f ∈ (·.f) '' s := by use e
+
+      have harange : a ∈ Set.range e.f := by
+        rw [← he] at ha''
+        use ⟨a', ha''⟩
+        rw [← ha']
+        symm
+        apply LinearPMap.sSup_apply hchain'.directedOn he' ⟨a', ha''⟩
+      obtain ⟨⟨b, hbmem⟩, hb⟩ := e.range_cut a harange c
+
+      simp only [Set.mem_range]
+      use ⟨b, Set.mem_of_mem_of_subset hbmem (by
+        unfold LinearPMap.sSup
+        simp only [ne_eq, SetLike.coe_subset_coe]
+        apply le_sSup
+        simp only [Set.mem_image, exists_exists_and_eq_and]
+        use e
+      )⟩
+      rw [LinearPMap.sSup_apply hchain'.directedOn he' ⟨b, hbmem⟩]
+      exact hb
+
   }
   intro t ht
-  apply LinearPMap.le_sSup hdir (by use t)
+  apply LinearPMap.le_sSup hchain'.directedOn (by use t)
+
+variable (M) in
+theorem SubEmbedding.exists_univ :
+    ∃ (e : SubEmbedding M), e.f.domain = ⊤ := by
+  obtain ⟨e, he⟩ := SubEmbedding.exists_maximal M
+  use e
+  suffices ∀ (x : M), x ∈ e.f.domain by
+    exact Submodule.eq_top_iff'.mpr this
+  contrapose! he with hx
+  obtain ⟨x, hx⟩ := hx
+  simp only [not_isMax_iff]
+  use e.extend hx
+  apply lt_of_le_of_ne
+  · constructor
+    · unfold extend
+      simp
+    · intro ⟨a, ha⟩ ⟨b, hb⟩ hab
+      simp only at hab
+      unfold extend ext_fun
+      simp only
+      symm
+      simp_rw [hab]
+      apply LinearPMap.supSpanSingleton_apply_mk_of_mem
+  · suffices e.f.domain ≠ (e.extend hx).f.domain by
+      contrapose! this
+      congr
+    by_contra heq
+    rw [heq] at hx
+    contrapose! hx
+    unfold extend
+    simp only [LinearPMap.domain_supSpanSingleton]
+    apply Submodule.mem_sup_right
+    simp
+
+variable (M) in
+noncomputable
+def hahn_embedding_of_divisible : M →+o HahnSeries (a⁰[M]) ℝ where
+  toFun (a) :=
+    let e := (SubEmbedding.exists_univ M).choose
+    let he : e.f.domain = ⊤  := (SubEmbedding.exists_univ M).choose_spec
+    let a' : e.f.domain := ⟨a, by
+      rw [he]
+      simp
+    ⟩
+    e.f a'
+
+  map_zero' := by
+    simp only
+    apply LinearPMap.map_zero
+
+  map_add' := by
+    intro a b
+    simp only
+    rw [← LinearPMap.map_add]
+    simp
+
+  monotone' := by
+    intro a b h
+    exact (SubEmbedding.exists_univ M).choose.strictMono.monotone h
+
+variable (M) in
+theorem hahn_embedding_of_divisible_injective: Function.Injective (hahn_embedding_of_divisible M) := by
+  intro a b h
+  simpa using (SubEmbedding.exists_univ M).choose.strictMono.injective h
