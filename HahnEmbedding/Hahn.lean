@@ -1,4 +1,5 @@
 import HahnEmbedding.ArchimedeanSubgroup
+import HahnEmbedding.LinearPMap
 import Mathlib.RingTheory.HahnSeries.Addition
 import Mathlib.LinearAlgebra.Span.Defs
 import Mathlib.LinearAlgebra.LinearPMap
@@ -388,9 +389,9 @@ structure SubEmbedding where
 
   strictMono : StrictMono f
 
-  hdomain : ∀ A : archimedeanClass M, ∀ a ∈ archimedeanGrade A, a ∈ f.domain
-  anchor : ∀ A : archimedeanClass M, ∀ a : M, (ha : a ∈ archimedeanGrade A) →
-    (f ⟨a, hdomain A a ha⟩).coeff =
+  hdomain : ∀ A : archimedeanClass M, A ≠ 0 → ∀ a ∈ archimedeanGrade A, a ∈ f.domain
+  anchor : ∀ A : archimedeanClass M, (hA : A ≠ 0) → ∀ a : M, (ha : a ∈ archimedeanGrade A) →
+    (f ⟨a, hdomain A hA a ha⟩).coeff =
     fun i ↦ if i.val = A then archimedeanGrade.embedReal_linear A ⟨a, ha⟩ else 0
 
   range_cut : ∀ x ∈ Set.range f, ∀ c : (a⁰[M]),
@@ -419,7 +420,7 @@ theorem SubEmbedding.orderTop_eq_class (e : SubEmbedding M) {x : M} (hx : x ∈ 
   have hmkeq: archimedeanClass.mk x' = archimedeanClass.mk x := by
     refine archimedeanGrade.mem_class_of_nonzero hx0 hx'mem ?_
     simpa using hx'0
-  have hclasseq : archimedeanClass.mk (⟨x', e.hdomain _ _ hx'mem⟩ : e.f.domain)
+  have hclasseq : archimedeanClass.mk (⟨x', e.hdomain _ hx0 _ hx'mem⟩ : e.f.domain)
       = archimedeanClass.mk ⟨x, hx⟩ := by
     rw [archimedeanClass.eq] at hmkeq ⊢
     exact hmkeq
@@ -435,18 +436,18 @@ theorem SubEmbedding.orderTop_eq_class (e : SubEmbedding M) {x : M} (hx : x ∈ 
 
   rw [HahnSeries.archimedeanClass_eq_iff] at h
 
-  have : (e.f ⟨x', e.hdomain _ _ hx'mem⟩).orderTop = WithTop.some ⟨archimedeanClass.mk x',
+  have : (e.f ⟨x', e.hdomain _ hx0 _ hx'mem⟩).orderTop = WithTop.some ⟨archimedeanClass.mk x',
       hmkeq.symm ▸ hx0⟩ := by
     apply HahnSeries.orderTop_eq_of_le
     · simp only [ne_eq, HahnSeries.mem_support]
-      rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
+      rw [e.anchor (archimedeanClass.mk x') (hmkeq.symm ▸ hx0) x' (hmkeq.symm ▸ hx'mem)]
       simp only [↓reduceIte]
       apply (LinearMap.map_eq_zero_iff _ (Archimedean.embedReal_injective _)).ne.mpr
       simpa using hx'0
     · intro g' hg
       contrapose! hg
       simp only [ne_eq, HahnSeries.mem_support, Decidable.not_not]
-      rw [e.anchor (archimedeanClass.mk x') x' (hmkeq.symm ▸ hx'mem)]
+      rw [e.anchor (archimedeanClass.mk x') (hmkeq.symm ▸ hx0) x' (hmkeq.symm ▸ hx'mem)]
       simp only [ne_eq, ite_eq_right_iff]
       intro hg'
       obtain hg := Subtype.eq_iff.ne.mp hg.ne
@@ -661,7 +662,7 @@ theorem SubEmbedding.eval_ne_of_not_mem (e : SubEmbedding M) {x : M} (hx : x ∉
   have hxzmem : z.val + xz' ∈ e.f.domain := by
     apply Submodule.add_mem
     · simp
-    · exact e.hdomain _ _ hxz'
+    · exact e.hdomain _ hxz0 _ hxz'
 
   by_cases hv0 : archimedeanClass.mk v = 0
   · have hv0' : v = 0 := archimedeanClass.eq_zero_iff.mp hv0
@@ -985,13 +986,13 @@ def SubEmbedding.extend (e : SubEmbedding M) {x : M} (hx : x ∉ e.f.domain) : S
   strictMono := ext_fun_strictMono e hx
 
   hdomain := by
-    intro A a ha
+    intro A hA a ha
     apply Submodule.mem_sup_left
-    exact e.hdomain A a ha
+    exact e.hdomain A hA a ha
   anchor := by
-    intro A a ha
-    rw [LinearPMap.supSpanSingleton_apply_mk_of_mem _ _ hx (e.hdomain A a ha)]
-    exact e.anchor A a ha
+    intro A hA a ha
+    rw [LinearPMap.supSpanSingleton_apply_mk_of_mem _ _ hx (e.hdomain A hA a ha)]
+    exact e.anchor A hA a ha
 
   range_cut := by
     intro a ha c
@@ -1083,46 +1084,38 @@ instance SubEmbedding.le : PartialOrder (SubEmbedding M) := {
 }
 
 noncomputable
-def principal_embed (A : (a⁰[M])) :
+abbrev principal_embed (A : (a⁰[M])) :
   M →ₗ.[ℚ] HahnSeries (a⁰[M]) ℝ where
   domain := archimedeanGrade A
   toFun := (HahnSeries.single.linearMap A).comp (archimedeanGrade.embedReal_linear A.val)
-/-
-theorem principal_decomp (x : ((⨆ A : (a⁰[M]), archimedeanGrade A.val) : Submodule ℚ M)) :
-    ∃ (f : Π₀ (A : (a⁰[M])), archimedeanGrade A.val),
-      ((DFinsupp.lsum ℕ) fun (A : (a⁰[M])) ↦ (archimedeanGrade A.val).subtype) f = x.val :=
-
-  (Submodule.mem_iSup_iff_exists_dfinsupp _ _).mp x.prop
 
 variable (M) in
-noncomputable
-def principal_decomp_linear :
-    ((⨆ A : (a⁰[M]), archimedeanGrade A.val) : Submodule ℚ M) →ₗ[ℚ]
-    Π₀ (A : (a⁰[M])), ↥(archimedeanGrade A.val) :=
+theorem principal_iSupIndep :
+    iSupIndep fun i ↦ (principal_embed (M := M) i).domain := by
+  intro ⟨A, hA⟩
+  unfold principal_embed
+  simp only
+  rw [Submodule.disjoint_def']
+  intro a ha b hb hab
   sorry
-  --LinearMap.inverse
-
-noncomputable
-def principal_embed (A : (a⁰[M])) : ((archimedeanGrade A) : Submodule ℚ M) →ₗ[ℚ] HahnSeries (a⁰[M]) ℝ :=
-    (HahnSeries.single.linearMap A).comp (archimedeanGrade.embedReal_linear A.val)
-
---noncomputable
---def principal_embed' (A : (a⁰[M])) :-/
-
 
 variable (M) in
 noncomputable
 def SubEmbedding.principle : SubEmbedding M where
-  f := {
-    domain := ⨆ A : (a⁰[M]), archimedeanGrade A.val
-    toFun := sorry
-  }
+  f := LinearPMap.iSup (p := principal_embed) (principal_iSupIndep M)
 
   strictMono := sorry
 
-  hdomain := sorry
+  hdomain := by
+    intro A hA a ha
+    apply Set.mem_of_mem_of_subset ha
+    simp only [SetLike.coe_subset_coe]
+    exact LinearPMap.le_iSup (principal_iSupIndep M) ⟨A, hA⟩
 
-  anchor := sorry
+  anchor := by
+    intro A hA a ha
+
+    sorry
 
   range_cut := sorry
 
@@ -1186,18 +1179,18 @@ theorem SubEmbedding.exists_maximal :
       have he' : e.f.domain ∈ (·.domain) '' ((·.f) '' s) := by
         simp only [ne_eq, Set.mem_image, exists_exists_and_eq_and]
         use e
-      intro A a ha
+      intro A hA a ha
       unfold LinearPMap.sSup
       simp only
       apply Submodule.mem_sSup_of_mem he'
-      exact e.hdomain A a ha
+      exact e.hdomain A hA a ha
 
     anchor := by
       obtain ⟨e, he⟩ := hnonempty
       have he' : e.f ∈ (·.f) '' s := by use e
-      intro A a ha
-      rw [LinearPMap.sSup_apply hchain'.directedOn he' ⟨a, e.hdomain A a ha⟩ ]
-      exact e.anchor A a ha
+      intro A hA a ha
+      rw [LinearPMap.sSup_apply hchain'.directedOn he' ⟨a, e.hdomain A hA a ha⟩ ]
+      exact e.anchor A hA a ha
 
     range_cut := by
       intro a ha c
