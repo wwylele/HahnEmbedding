@@ -1252,27 +1252,31 @@ theorem principal_strictMono : StrictMono (principal_map M) := by
     rw [hf, h]
     simp
 
+  have hmono : StrictMonoOn (fun x ↦ archimedeanClass.mk (f x).val) f.support := by
+    apply StrictMonoOn.congr
+      ((Subtype.strictMono_coe {A : archimedeanClass M | A ≠ 0}).strictMonoOn _)
+    intro A hA
+    symm
+    apply archimedeanGrade.mem_class_of_nonzero A.prop (f A).prop (by simpa using hA)
+
   have hmk : archimedeanClass.mk s.val =
       archimedeanClass.mk (f (f.support.min' hnonempty)).val := by
     rw [hf]
 
-    have hmono : StrictMonoOn (fun x ↦ archimedeanClass.mk (f x).val) f.support := by
-      apply StrictMonoOn.congr
-        ((Subtype.strictMono_coe {A : archimedeanClass M | A ≠ 0}).strictMonoOn _)
-      intro A hA
-      symm
-      apply archimedeanGrade.mem_class_of_nonzero A.prop (f A).prop (by simpa using hA)
-
     exact archimedeanClass.mk_sum hnonempty hmono
 
-  have hmk' : archimedeanClass.mk (f (f.support.min' hnonempty)).val =
-      (f.support.min' hnonempty).val := by
+  have hmkf (A : a⁰[M]) (hsupport : A ∈ f.support) : archimedeanClass.mk (f A).val = A.val := by
     apply archimedeanGrade.mem_class_of_nonzero
-    · exact (f.support.min' hnonempty).prop
+    · exact A.prop
     · simp
     · rw [Submodule.coe_eq_zero.ne]
       rw [← DFinsupp.mem_support_iff]
-      apply Finset.min'_mem
+      exact hsupport
+
+  have hmk' : archimedeanClass.mk (f (f.support.min' hnonempty)).val =
+      (f.support.min' hnonempty).val := by
+    apply hmkf
+    apply Finset.min'_mem
 
   constructor
   · intro j hj
@@ -1292,9 +1296,53 @@ theorem principal_strictMono : StrictMono (principal_map M) := by
     rw [archimedeanGrade.embedReal_linear_eq_orderEmbedding,
       archimedeanGrade.embedReal_linear_eq_orderEmbedding]
     apply (OrderEmbedding.strictMono _)
-    rw [← Subtype.coe_lt_coe]
 
-    sorry
+    have hclass {h : archimedeanClass.mk s.val ≠ 0} :
+        archimedeanClass.mk s.val <
+        archimedeanClass.mk ((f ⟨archimedeanClass.mk s.val, h⟩).val - s.val) := by
+      rw [archimedeanClass.mk_sub_comm]
+      nth_rw 1 [hf]
+      nth_rw 1 [hf]
+      have : ∑ x ∈ f.support, (f x).val - (f ⟨archimedeanClass.mk s.val, h⟩).val
+          = ∑ x ∈ (f.support.erase ⟨archimedeanClass.mk s.val, h⟩), (f x).val := by
+        apply sub_eq_of_eq_add
+        symm
+        apply Finset.sum_erase_add
+        convert f.support.min'_mem hnonempty
+        rw [hmk, hmk']
+
+      rw [this]
+
+
+      by_cases h0 : ∑ x ∈ (f.support.erase ⟨archimedeanClass.mk s.val, h⟩), (f x).val = 0
+      · rw [h0]
+        apply lt_of_le_of_ne (archimedeanClass.nonpos _)
+        rw [← hf]
+        exact h
+      · have hnonempty' : (f.support.erase ⟨archimedeanClass.mk s.val, h⟩).Nonempty := by
+          contrapose! h0
+          simp only [ne_eq, Finset.not_nonempty_iff_eq_empty] at h0
+          rw [h0]
+          simp
+
+        rw [archimedeanClass.mk_sum hnonempty hmono]
+        rw [archimedeanClass.mk_sum hnonempty' (hmono.mono (by simp))]
+        rw [hmk']
+        rw [hmkf _ (
+          Finset.mem_of_subset (Finset.erase_subset _ _) (Finset.min'_mem _ _))]
+        rw [Subtype.coe_lt_coe]
+        apply lt_of_le_of_ne
+        · apply Finset.min'_le
+          exact Finset.mem_of_subset (Finset.erase_subset _ _) (Finset.min'_mem _ _)
+        · obtain hmem := Finset.min'_mem _ hnonempty'
+          contrapose! hmem with heq
+          rw [← heq]
+          convert Finset.not_mem_erase (f.support.min' hnonempty) _
+          rw [hmk, hmk']
+
+    rw [← Subtype.coe_lt_coe] at ⊢ h
+    simp only [ZeroMemClass.coe_zero] at ⊢ h
+    exact archimedeanClass.pos_of_pos_of_mk_lt h hclass
 
 
 

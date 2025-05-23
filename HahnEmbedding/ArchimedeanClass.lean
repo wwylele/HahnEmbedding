@@ -77,6 +77,10 @@ theorem mk_inv (a : M) : mk a⁻¹ = mk a := by
   rw [eq]
   exact ⟨⟨1, by simp, by simp⟩, ⟨1, by simp, by simp⟩⟩
 
+@[to_additive]
+theorem mk_div_comm (a b : M) : mk (a / b) = mk (b / a) := by
+  rw [← mk_inv, inv_div]
+
 @[to_additive (attr := simp)]
 theorem mk_mabs (a : M) : mk |a|ₘ = mk a := by
   rw [eq]
@@ -317,6 +321,15 @@ theorem lt_of_mk_lt_mk' {a b : M} (h : mk a < mk b) (hneg : a ≤ 1) : a < b := 
   rw [pow_one, mabs_lt, mabs_eq_inv_self.mpr hneg] at h
   simp only [inv_inv] at h
   exact h.1
+
+@[to_additive]
+theorem one_lt_of_one_lt_of_mk_lt {a b : M} (ha : 1 < a) (hab : mk a < mk (b / a)) :
+    1 < b := by
+  suffices a⁻¹ < b / a by
+    simpa using this
+  apply lt_of_mk_lt_mk'
+  · simpa using hab
+  · simpa using ha.le
 
 @[to_additive]
 theorem Ioi_nonempty {A : mulArchimedeanClass M} (hA : A ≠ 1):
