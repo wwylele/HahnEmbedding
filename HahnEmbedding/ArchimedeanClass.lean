@@ -241,6 +241,58 @@ theorem mk_eq_mk_self_mul_of_mk_lt {a b : M} (h : mk a < mk b) : mk a = mk (a * 
       simpa using (h 1).le
 
 @[to_additive]
+theorem mk_prod {ι : Type*} [LinearOrder ι] {s : Finset ι} (hnonempty : s.Nonempty)
+    {a : ι → M}  :
+    StrictMonoOn (mk ∘ a) s → mk (∏ i ∈ s, (a i)) = mk (a (s.min' hnonempty)) := by
+  induction hnonempty using Finset.Nonempty.cons_induction with
+  | singleton i => simp
+  | cons i s hi hs ih =>
+    intro hmono
+    obtain ih := ih (hmono.mono (by simp))
+    rw [Finset.prod_cons]
+    have hminmem : s.min' hs ∈ (Finset.cons i s hi) :=
+      Finset.mem_cons_of_mem (by apply Finset.min'_mem)
+    have hne : mk (a i) ≠ mk (a (s.min' hs)) := by
+      by_contra!
+      obtain eq := hmono.injOn (by simp) hminmem this
+      rw [eq] at hi
+      obtain hi' := Finset.min'_mem _ hs
+      exact hi hi'
+    rw [← ih] at hne
+    obtain hlt|hlt := lt_or_gt_of_ne hne
+    · rw [← mk_eq_mk_self_mul_of_mk_lt hlt]
+      congr
+      apply le_antisymm
+      · apply Finset.le_min'
+        intro y hy
+        obtain heq|hmem := Finset.mem_cons.mp hy
+        · rw [heq]
+        · apply le_of_lt
+          refine lt_of_lt_of_le ?_ (Finset.min'_le _ _ hmem)
+          apply (hmono.lt_iff_lt (by simp) hminmem).mp
+          rw [ih] at hlt
+          exact hlt
+      · apply Finset.min'_le
+        simp
+    · rw [mul_comm]
+      rw [← mk_eq_mk_self_mul_of_mk_lt hlt]
+      rw [ih]
+      congr 2
+      apply le_antisymm
+      · apply Finset.le_min'
+        intro y hy
+        obtain heq|hmem := Finset.mem_cons.mp hy
+        · rw [heq]
+          apply le_of_lt
+          apply (hmono.lt_iff_lt hminmem (by simp)).mp
+          rw [ih] at hlt
+          exact hlt
+        · apply Finset.min'_le
+          exact hmem
+      · apply Finset.min'_le
+        exact hminmem
+
+@[to_additive]
 theorem min_le_mk_mul (a b : M) : min (mk a) (mk b) ≤ mk (a * b) := by
   obtain hab|hab|hab := lt_trichotomy (mk a) (mk b)
   · simp only [inf_le_iff]

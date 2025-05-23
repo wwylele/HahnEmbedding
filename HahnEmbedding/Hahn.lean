@@ -4,6 +4,7 @@ import Mathlib.RingTheory.HahnSeries.Addition
 import Mathlib.LinearAlgebra.Span.Defs
 import Mathlib.LinearAlgebra.LinearPMap
 import Mathlib.Order.WellFoundedSet
+import Mathlib.Algebra.Module.Submodule.Lattice
 
 open Classical in
 noncomputable
@@ -391,8 +392,8 @@ structure SubEmbedding where
 
   hdomain : ∀ A : archimedeanClass M, A ≠ 0 → ∀ a ∈ archimedeanGrade A, a ∈ f.domain
   anchor : ∀ A : archimedeanClass M, (hA : A ≠ 0) → ∀ a : M, (ha : a ∈ archimedeanGrade A) →
-    (f ⟨a, hdomain A hA a ha⟩).coeff =
-    fun i ↦ if i.val = A then archimedeanGrade.embedReal_linear A ⟨a, ha⟩ else 0
+    (f ⟨a, hdomain A hA a ha⟩) =
+    HahnSeries.single ⟨A, hA⟩ (archimedeanGrade.embedReal_linear A ⟨a, ha⟩)
 
   range_cut : ∀ x ∈ Set.range f, ∀ c : (a⁰[M]),
     (HahnSeries.cut _ _ c) x ∈ Set.range f
@@ -441,19 +442,15 @@ theorem SubEmbedding.orderTop_eq_class (e : SubEmbedding M) {x : M} (hx : x ∈ 
     apply HahnSeries.orderTop_eq_of_le
     · simp only [ne_eq, HahnSeries.mem_support]
       rw [e.anchor (archimedeanClass.mk x') (hmkeq.symm ▸ hx0) x' (hmkeq.symm ▸ hx'mem)]
-      simp only [↓reduceIte]
+      simp only [HahnSeries.coeff_single_same]
       apply (LinearMap.map_eq_zero_iff _ (Archimedean.embedReal_injective _)).ne.mpr
       simpa using hx'0
     · intro g' hg
       contrapose! hg
       simp only [ne_eq, HahnSeries.mem_support, Decidable.not_not]
       rw [e.anchor (archimedeanClass.mk x') (hmkeq.symm ▸ hx0) x' (hmkeq.symm ▸ hx'mem)]
-      simp only [ne_eq, ite_eq_right_iff]
-      intro hg'
-      obtain hg := Subtype.eq_iff.ne.mp hg.ne
-      simp only [ne_eq] at hg
-      rw [hg'] at hg
-      simp at hg
+      apply HahnSeries.coeff_single_of_ne
+      exact hg.ne
   rw [this] at h
   rw [h]
   simpa using hmkeq
@@ -1084,45 +1081,250 @@ instance SubEmbedding.le : PartialOrder (SubEmbedding M) := {
 }
 
 noncomputable
-abbrev principal_embed (A : (a⁰[M])) :
+abbrev grade_embed (A : (a⁰[M])) :
   M →ₗ.[ℚ] HahnSeries (a⁰[M]) ℝ where
   domain := archimedeanGrade A
   toFun := (HahnSeries.single.linearMap A).comp (archimedeanGrade.embedReal_linear A.val)
 
 variable (M) in
-theorem principal_iSupIndep :
-    iSupIndep fun i ↦ (principal_embed (M := M) i).domain := by
+theorem grade_iSupIndep :
+    iSupIndep fun i ↦ (grade_embed (M := M) i).domain := by
+  rw [iSupIndep_def]
   intro ⟨A, hA⟩
-  unfold principal_embed
+  unfold grade_embed
   simp only
   rw [Submodule.disjoint_def']
   intro a ha b hb hab
-  sorry
+  by_cases hb0 : b = 0
+  · exact hb0 ▸ hab
+  · contrapose! hab
+    suffices archimedeanClass.mk a ≠ archimedeanClass.mk b by
+      exact fun x ↦ this (congrArg archimedeanClass.mk x)
+    obtain ⟨f, hf⟩ := (Submodule.mem_iSup_iff_exists_dfinsupp _ b).mp hb
+    simp only [ne_eq, DFinsupp.lsum_apply_apply] at hf
+    rw [DFinsupp.sumAddHom_apply] at hf
+    simp only [LinearMap.toAddMonoidHom_coe, Submodule.coe_subtype, ZeroMemClass.coe_zero,
+      implies_true] at hf
+    rw [DFinsupp.sum] at hf
+    have hnonempty : f.support.Nonempty := by
+      contrapose! hb0
+      rw [← hf]
+      simp only [ne_eq, Finset.not_nonempty_iff_eq_empty, DFinsupp.support_eq_empty] at hb0
+      rw [hb0]
+      simp
+    rw [← hf]
+
+    have hfA : f ⟨A, hA⟩ = 0 := by
+      apply Submodule.coe_eq_zero.mp
+      apply (Submodule.mem_bot ℚ).mp
+      convert (f ⟨A, hA⟩).prop
+      simp
+
+    rw [archimedeanClass.mk_sum hnonempty (by
+      apply StrictMonoOn.congr
+        ((Subtype.strictMono_coe {A : archimedeanClass M | A ≠ 0}).strictMonoOn _)
+      intro A' hA'
+      symm
+      refine archimedeanGrade.mem_class_of_nonzero A'.prop ?_ (by simpa using hA')
+      convert (f A').prop
+      have hne : A' ≠ ⟨A, hA⟩ := by
+        contrapose! hA'
+        rw [hA']
+        simpa using hfA
+      simp [hne]
+    )]
+
+    obtain hmem := Finset.min'_mem f.support hnonempty
+
+    have hminne : f.support.min' hnonempty ≠ ⟨A, hA⟩ := by
+      by_contra!
+      rw [this] at hmem
+      simp only [DFinsupp.mem_support_toFun] at hmem
+      contrapose! hmem
+      exact hfA
+
+    rw [archimedeanGrade.mem_class_of_nonzero hA ha hab]
+    rw [archimedeanGrade.mem_class_of_nonzero
+      ((f.support.min' hnonempty).prop)
+      (by
+        obtain h := (f (f.support.min' _)).prop
+        convert h
+        simp [hminne]
+      ) (by
+        rw [Submodule.coe_eq_zero.ne]
+        apply DFinsupp.mem_support_iff.mp
+        apply Finset.min'_mem _ hnonempty
+      )]
+
+    contrapose! hmem with heq
+    have heq' : ⟨A, hA⟩ = f.support.min' hnonempty := Subtype.eq heq
+    rw [← heq']
+    simpa using hfA
 
 variable (M) in
 noncomputable
-def SubEmbedding.principle : SubEmbedding M where
-  f := LinearPMap.iSup (p := principal_embed) (principal_iSupIndep M)
+abbrev principal_map := LinearPMap.iSup (p := grade_embed) (grade_iSupIndep M)
 
-  strictMono := sorry
+theorem principal_map_apply {x : (⨆ (A : (a⁰[M])), archimedeanGrade A.val : Submodule ℚ M)}
+    {f : Π₀ (A : (a⁰[M])), archimedeanGrade A.val}
+    (hx : x.val = ((DFinsupp.lsum ℕ) fun (A : (a⁰[M])) ↦ (archimedeanGrade A.val).subtype) f) :
+    (principal_map M x).coeff = fun (A : (a⁰[M])) ↦ (archimedeanGrade.embedReal_linear A.val (f A)) := by
+
+
+  rw [LinearPMap.iSup_apply (grade_iSupIndep M) hx]
+  ext A
+  simp only [ne_eq, DFinsupp.lsum_apply_apply]
+  rw [DFinsupp.sumAddHom_apply]
+  unfold DFinsupp.sum
+  rw [HahnSeries.coeff_sum]
+
+  have h : f A = 0 → 0 = (archimedeanGrade.embedReal_linear A.val) (f A ) := by
+    intro h
+    rw [h]
+    simp
+
+  simpa using h
+
+
+theorem principal_cut_range {s : HahnSeries (a⁰[M]) ℝ}
+    (hs : s ∈ Set.range (principal_map M)) (c : (a⁰[M])) :
+    (HahnSeries.cut _ ℝ c) s ∈ Set.range (principal_map M) := by
+  obtain ⟨a, ha⟩ := hs
+  let f := (combine_equiv (grade_iSupIndep M)).symm a
+  have hf : a = (combine_equiv (grade_iSupIndep M)) f := by
+    unfold f
+    simp
+
+  let cf' : Π₀ (i : { A // A ≠ 0 }), ((grade_embed i).domain : Submodule ℚ M) :=
+    DFinsupp.mk f.support fun A ↦ if c ≤ A then 0 else f A
+
+  use (combine_equiv (grade_iSupIndep M)) cf'
+
+  ext A
+  rw [principal_map_apply rfl]
+  unfold HahnSeries.cut HahnSeries.cut_fun cf'
+  simp only [ne_eq, Finset.coe_sort_coe, DFinsupp.mk_apply, DFinsupp.mem_support_toFun, dite_not,
+    LinearMap.coe_mk, AddHom.coe_mk]
+
+  split_ifs with h1 h2
+  · simp
+  · rw [← ha, hf]
+    rw [principal_map_apply rfl]
+    simp only [map_zero, ne_eq]
+    rw [h1]
+    simp
+  · simp
+  · rw [← ha, hf]
+    rw [principal_map_apply rfl]
+
+variable (M) in
+theorem principal_strictMono : StrictMono (principal_map M) := by
+  intro a b h
+  rw [← sub_pos] at h
+  apply lt_of_sub_pos
+  rw [← LinearPMap.map_sub]
+  set s := b - a
+  let f := (combine_equiv (grade_iSupIndep M)).symm s
+  have hf : s = (combine_equiv (grade_iSupIndep M)) f := by
+    unfold f
+    simp
+  rw [hf]
+  rw [HahnSeries.lt_iff]
+  use ⟨archimedeanClass.mk s.val, by
+    apply archimedeanClass.eq_zero_iff.ne.mpr
+    apply ne_of_gt
+    simpa using h
+  ⟩
+
+  unfold combine_equiv combine at hf
+  rw [Subtype.eq_iff] at hf
+  simp only [ne_eq, DFinsupp.lsum_apply_apply, LinearEquiv.ofBijective_apply, LinearMap.coe_mk,
+    AddHom.coe_mk] at hf
+  rw [DFinsupp.sumAddHom_apply] at hf
+  unfold DFinsupp.sum at hf
+  simp only [LinearMap.toAddMonoidHom_coe, Submodule.subtype_apply] at hf
+
+  have hnonempty : f.support.Nonempty := by
+    contrapose! h
+    simp only [ne_eq, Finset.not_nonempty_iff_eq_empty, DFinsupp.support_eq_empty] at h
+    apply le_of_eq
+    rw [Subtype.eq_iff]
+    rw [hf, h]
+    simp
+
+  have hmk : archimedeanClass.mk s.val =
+      archimedeanClass.mk (f (f.support.min' hnonempty)).val := by
+    rw [hf]
+
+    have hmono : StrictMonoOn (fun x ↦ archimedeanClass.mk (f x).val) f.support := by
+      apply StrictMonoOn.congr
+        ((Subtype.strictMono_coe {A : archimedeanClass M | A ≠ 0}).strictMonoOn _)
+      intro A hA
+      symm
+      apply archimedeanGrade.mem_class_of_nonzero A.prop (f A).prop (by simpa using hA)
+
+    exact archimedeanClass.mk_sum hnonempty hmono
+
+  have hmk' : archimedeanClass.mk (f (f.support.min' hnonempty)).val =
+      (f.support.min' hnonempty).val := by
+    apply archimedeanGrade.mem_class_of_nonzero
+    · exact (f.support.min' hnonempty).prop
+    · simp
+    · rw [Submodule.coe_eq_zero.ne]
+      rw [← DFinsupp.mem_support_iff]
+      apply Finset.min'_mem
+
+  constructor
+  · intro j hj
+    rw [principal_map_apply rfl]
+    simp only [ne_eq, HahnSeries.coeff_zero]
+    symm
+    convert LinearMap.map_zero _
+    contrapose! hj
+    simp_rw [hmk, hmk']
+    simp only [Subtype.coe_eta]
+    apply Finset.min'_le
+    simpa using hj
+  · rw [principal_map_apply rfl]
+    simp only [ne_eq, HahnSeries.coeff_zero, id_eq]
+    have : 0 = (archimedeanGrade.embedReal_linear (archimedeanClass.mk s.val)) 0 := by simp
+    rw [this]
+    rw [archimedeanGrade.embedReal_linear_eq_orderEmbedding,
+      archimedeanGrade.embedReal_linear_eq_orderEmbedding]
+    apply (OrderEmbedding.strictMono _)
+    rw [← Subtype.coe_lt_coe]
+
+    sorry
+
+
+
+variable (M) in
+noncomputable
+def SubEmbedding.principal : SubEmbedding M where
+  f := principal_map M
+
+  strictMono := principal_strictMono M
 
   hdomain := by
     intro A hA a ha
     apply Set.mem_of_mem_of_subset ha
     simp only [SetLike.coe_subset_coe]
-    exact LinearPMap.le_iSup (principal_iSupIndep M) ⟨A, hA⟩
+    exact LinearPMap.le_iSup (grade_iSupIndep M) ⟨A, hA⟩
 
   anchor := by
     intro A hA a ha
+    have ha' : a ∈ (grade_embed ⟨A, hA⟩).domain := ha
+    rw [LinearPMap.iSup_apply_i (grade_iSupIndep M) ha']
+    rfl
 
-    sorry
-
-  range_cut := sorry
+  range_cut := by
+    intro ⟨a, ha⟩ h c
+    apply principal_cut_range h
 
 
 variable (M) in
 instance SubEmbedding.nonempty : Nonempty (SubEmbedding M) :=
-  Nonempty.intro (SubEmbedding.principle M)
+  Nonempty.intro (SubEmbedding.principal M)
 
 variable (M) in
 theorem SubEmbedding.exists_maximal :

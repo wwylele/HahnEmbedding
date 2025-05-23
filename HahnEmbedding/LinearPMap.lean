@@ -44,30 +44,35 @@ theorem combine_injective
   exact iSupIndep.dfinsupp_lsum_injective h hab
 
 noncomputable
-abbrev decomp {ι : Type*} {R : Type*} {N : Type*}
+abbrev combine_equiv {ι : Type*} {R : Type*} {N : Type*}
     [Ring R] [AddCommGroup N] [Module R N] [DecidableEq ι] {p : ι → Submodule R N}
     (h : iSupIndep p) :
-    ((⨆ i : ι, p i) : Submodule R N) →ₗ[R] (Π₀ (i : ι), ↥(p i)) :=
+    (Π₀ (i : ι), ↥(p i)) ≃ₗ[R] ((⨆ i : ι, p i) : Submodule R N) :=
 
-  (combine p).inverse
-    (Function.surjInv (combine_surjective p))
-    (Function.leftInverse_surjInv ⟨combine_injective h, combine_surjective p⟩)
-    (Function.rightInverse_surjInv (combine_surjective p))
+  LinearEquiv.ofBijective (combine p) ⟨combine_injective h, combine_surjective p⟩
 
-open Classical in
+theorem decomp_i {ι : Type*} {R : Type*} {N : Type*}
+    [Ring R] [AddCommGroup N] [Module R N] [DecidableEq ι] {p : ι → Submodule R N}
+    (h : iSupIndep p) {x :  ((⨆ i : ι, p i) : Submodule R N)}
+    {i : ι} (hx : x.val ∈ p i) :
+    (combine_equiv h).symm x = DFinsupp.lsingle (R := ℕ) i ⟨x.val, hx⟩ := by
+
+  rw [LinearEquiv.symm_apply_eq]
+  simp
+
 noncomputable def LinearPMap.iSup {R : Type*} [Ring R]
     {E : Type*} [AddCommGroup E] [Module R E]
     {F : Type*} [AddCommGroup F] [Module R F]
-    {ι : Type*} {p : ι → (E →ₗ.[R] F)}
+    {ι : Type*} [DecidableEq ι] {p : ι → (E →ₗ.[R] F)}
     (h : iSupIndep (fun i ↦ (p i).domain)) :
     E →ₗ.[R] F where
   domain := ⨆ i : ι, (p i).domain
-  toFun := LinearMap.comp (DFinsupp.lsum ℕ (fun i ↦ (p i).toFun)) (decomp h)
+  toFun := LinearMap.comp (DFinsupp.lsum ℕ (fun i ↦ (p i).toFun)) (combine_equiv h).symm.toLinearMap
 
 theorem LinearPMap.domain_iSup {R : Type*} [Ring R]
     {E : Type*} [AddCommGroup E] [Module R E]
     {F : Type*} [AddCommGroup F] [Module R F]
-    {ι : Type*} {p : ι → (E →ₗ.[R] F)}
+    {ι : Type*} [DecidableEq ι] {p : ι → (E →ₗ.[R] F)}
     (h : iSupIndep (fun i ↦ (p i).domain)) :
     (LinearPMap.iSup h).domain = ⨆ i : ι, (p i).domain := by rfl
 
@@ -75,8 +80,41 @@ nonrec
 theorem LinearPMap.le_iSup {R : Type*} [Ring R]
     {E : Type*} [AddCommGroup E] [Module R E]
     {F : Type*} [AddCommGroup F] [Module R F]
-    {ι : Type*} {p : ι → (E →ₗ.[R] F)}
+    {ι : Type*} [DecidableEq ι] {p : ι → (E →ₗ.[R] F)}
     (h : iSupIndep (fun i ↦ (p i).domain)) (i : ι):
     (p i).domain ≤ (LinearPMap.iSup h).domain := by
   rw [LinearPMap.domain_iSup]
   apply le_iSup _ i
+
+theorem LinearPMap.iSup_apply_i {R : Type*} [Ring R]
+    {E : Type*} [AddCommGroup E] [Module R E]
+    {F : Type*} [AddCommGroup F] [Module R F]
+    {ι : Type*} [DecidableEq ι] {p : ι → (E →ₗ.[R] F)}
+    (h : iSupIndep (fun i ↦ (p i).domain))
+    {x : (LinearPMap.iSup h).domain}
+    {i : ι} (hx : x.val ∈ (p i).domain):
+    (LinearPMap.iSup h) x = (p i) ⟨x.val, hx⟩ := by
+
+  unfold LinearPMap.iSup
+  simp only [mk_apply, LinearMap.coe_comp, LinearEquiv.coe_coe, Function.comp_apply,
+    DFinsupp.lsum_apply_apply]
+  rw [decomp_i h hx]
+  simp
+
+theorem LinearPMap.iSup_apply {R : Type*} [Ring R]
+    {E : Type*} [AddCommGroup E] [Module R E]
+    {F : Type*} [AddCommGroup F] [Module R F]
+    {ι : Type*} [DecidableEq ι] {p : ι → (E →ₗ.[R] F)}
+    (h : iSupIndep (fun i ↦ (p i).domain))
+    {x : (LinearPMap.iSup h).domain}
+    {f : Π₀ (i : ι), (p i).domain}
+    (hx : x.val = ((DFinsupp.lsum ℕ) fun (i : ι) ↦ (p i).domain.subtype) f) :
+    (LinearPMap.iSup h) x = ((DFinsupp.lsum ℕ) fun (i : ι) ↦ (p i).toFun) f := by
+
+  unfold LinearPMap.iSup
+  simp only [mk_apply, LinearMap.coe_comp, LinearEquiv.coe_coe, Function.comp_apply,
+    DFinsupp.lsum_apply_apply]
+  congr
+  rw [LinearEquiv.symm_apply_eq]
+  rw [Subtype.eq_iff]
+  exact hx

@@ -301,3 +301,21 @@ theorem Archimedean.embedReal_injective : Function.Injective (embedReal M) := by
   split_ifs with h
   · exact embedReal_of_trivial_injective h
   · apply embedReal_of_pos_injective
+
+variable (M) in
+noncomputable
+def Archimedean.embedReal_orderEmbedding : M ↪o ℝ where
+  toFun := Archimedean.embedReal M
+  inj' := Archimedean.embedReal_injective M
+  map_rel_iff' := by
+    intro a b
+    constructor
+    · intro h
+      contrapose! h
+      apply lt_of_le_of_ne
+      · apply OrderHomClass.monotone (embedReal M) h.le
+      · contrapose! h
+        apply le_of_eq
+        exact (Archimedean.embedReal_injective M) h.symm
+    · intro h
+      apply OrderHomClass.monotone (embedReal M) h

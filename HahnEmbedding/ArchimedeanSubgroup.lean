@@ -278,6 +278,10 @@ theorem embedReal_injective (A : archimedeanClass M) : Function.Injective (embed
   Archimedean.embedReal_injective (archimedeanGrade A)
 
 noncomputable
+def embedReal_orderEmbedding (A : archimedeanClass M) : archimedeanGrade A ↪o ℝ :=
+  Archimedean.embedReal_orderEmbedding (archimedeanGrade A)
+
+noncomputable
 def embedReal_linear (A : archimedeanClass M) : archimedeanGrade A →ₗ[ℚ] ℝ := {
   embedReal A with
   map_smul' (q) (a) := by
@@ -293,6 +297,9 @@ def embedReal_linear (A : archimedeanClass M) : archimedeanGrade A →ₗ[ℚ] �
     rw [← map_zsmul]
 
 }
+
+theorem embedReal_linear_eq_orderEmbedding {A : archimedeanClass M} (a : archimedeanGrade A):
+  (embedReal_linear A) a = (embedReal_orderEmbedding A) a := by rfl
 
 end archimedeanGrade
 
